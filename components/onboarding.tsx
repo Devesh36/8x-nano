@@ -5,6 +5,7 @@ import { ArrowLeft, Check, ChevronDown, Globe2, Mail, ShieldCheck, Sparkles } fr
 import { creatorCard, industries } from "@/lib/data";
 import { BrandSymbol, CreatorCard } from "@/components/creator-card";
 import { PrimaryButton, SecondaryButton } from "@/components/ui";
+import { GoogleAuthModal } from "@/components/auth";
 
 const steps = ["role", "signup", "profile", "details", "pricing", "professional", "preview"] as const;
 type Step = (typeof steps)[number];
@@ -17,6 +18,9 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
   const [selectedIndustries, setSelectedIndustries] = useState(["AI", "Software", "Productivity"]);
   const [price, setPrice] = useState(creatorCard.price);
   const [savedProfessional, setSavedProfessional] = useState(false);
+  const [googleOpen, setGoogleOpen] = useState(false);
+  const [importedProfile, setImportedProfile] = useState(false);
+  const [profileError, setProfileError] = useState("");
 
   const stepIndex = steps.indexOf(step);
   useEffect(() => {
@@ -33,6 +37,21 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
   const next = () => goTo(steps[Math.min(steps.length - 1, stepIndex + 1)]);
   const previous = () => goTo(steps[Math.max(0, stepIndex - 1)]);
   const toggleIndustry = (name: string) => setSelectedIndustries((current) => current.includes(name) ? current.filter((item) => item !== name) : current.length < 3 ? [...current, name] : current);
+  const updateProfileUrl = (value: string) => {
+    setProfileUrl(value);
+    setImportedProfile(false);
+    setProfileError("");
+  };
+  const importProfile = () => {
+    const slug = profileUrl.replace(/\/$/, "").split("/").pop()?.toLowerCase();
+    if (["demo-creator", "devesh-rathod", "devesh36"].includes(slug ?? "")) {
+      setImportedProfile(true);
+      setProfileError("");
+    } else {
+      setImportedProfile(false);
+      setProfileError("Live LinkedIn import is not connected in this demo. Use the seeded demo profile to continue safely.");
+    }
+  };
 
   return (
     <main className="relative flex min-h-screen justify-center overflow-hidden bg-white px-5 pb-28 pt-8 text-[var(--ink)] sm:pt-12">
@@ -41,34 +60,39 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
         <div className="mb-8 flex items-center justify-between"><span className="brand-mark text-[20px]"><BrandSymbol /></span><span className="flex items-center gap-2 text-sm text-[var(--ink)]"><Globe2 size={15} className="text-[var(--muted)]" /> EN</span></div>
         {step !== "role" && step !== "preview" && <button onClick={previous} className="mb-4 inline-flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--ink)]"><ArrowLeft size={15} /> {step === "profile" ? "Back to my account" : "Back"}</button>}
         {step !== "role" && step !== "professional" && step !== "preview" && <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP {stepIndex} OF 4</p>}
-        {step === "role" && <RoleStep selected={selectedRole} onSelect={setSelectedRole} onContinue={next} onDemo={() => window.location.assign("/demo")} />}
-        {step === "signup" && <SignupStep onContinue={next} />}
-        {step === "profile" && <ProfileStep value={profileUrl} onChange={setProfileUrl} onUseDemo={() => setProfileUrl("https://www.linkedin.com/in/demo-creator")} onContinue={next} />}
+        {step === "role" && <RoleStep selected={selectedRole} onSelect={setSelectedRole} onContinue={next} onDemo={() => window.location.assign("/demo")} onSignIn={() => window.location.assign("/signin")} />}
+        {step === "signup" && <SignupStep onContinue={next} onGoogle={() => setGoogleOpen(true)} onSignIn={() => window.location.assign("/signin")} />}
+        {step === "profile" && <ProfileStep value={profileUrl} onChange={updateProfileUrl} onUseDemo={() => updateProfileUrl("https://www.linkedin.com/in/demo-creator")} imported={importedProfile} error={profileError} onImport={importProfile} onContinue={next} />}
         {step === "details" && <DetailsStep country={country} setCountry={setCountry} selected={selectedIndustries} toggle={toggleIndustry} onContinue={next} />}
         {step === "pricing" && <PricingStep price={price} setPrice={setPrice} onContinue={next} />}
         {step === "professional" && <ProfessionalStep saved={savedProfessional} setSaved={setSavedProfessional} onContinue={next} />}
         {step === "preview" && <PreviewStep onContinue={() => window.location.assign("/creator#home")} />}
       </div>
       <AssistantBar label={step === "role" ? "What would you like to see?" : "What would you like to do?"} />
+      {googleOpen && <GoogleAuthModal mode="signup" onClose={() => setGoogleOpen(false)} onSuccess={() => { setGoogleOpen(false); next(); }} />}
     </main>
   );
 }
 
-function RoleStep({ selected, onSelect, onContinue, onDemo }: { selected: string | null; onSelect: (role: "creator" | "brand") => void; onContinue: () => void; onDemo: () => void }) {
-  return <section><h1 className="text-[26px] font-bold tracking-[-.04em]">Create your account</h1><p className="mt-1 text-sm text-[var(--muted)]">First, who are you here as?</p><div className="mt-6 space-y-3"><RoleOption title="I'm a creator" text="Get paid to create LinkedIn content for B2B brands you actually use." selected={selected === "creator"} onClick={() => onSelect("creator")} /><RoleOption title="I'm a brand" text="Find creators, launch campaigns, and trace real pipeline back to each post." selected={selected === "brand"} onClick={() => onSelect("brand")} /></div><p className="mt-6 text-center text-xs text-[var(--muted)]">Already have an account? <button className="text-[var(--blue)]">Sign in</button></p><PrimaryButton disabled={!selected} onClick={onContinue} className="mt-8 w-full">Continue</PrimaryButton><button onClick={onDemo} className="mt-4 w-full text-center text-sm font-semibold text-[var(--blue)]">Explore the demo workspace</button></section>;
+function RoleStep({ selected, onSelect, onContinue, onDemo, onSignIn }: { selected: string | null; onSelect: (role: "creator" | "brand") => void; onContinue: () => void; onDemo: () => void; onSignIn: () => void }) {
+  return <section><h1 className="text-[26px] font-bold tracking-[-.04em]">Create your account</h1><p className="mt-1 text-sm text-[var(--muted)]">First, who are you here as?</p><div className="mt-6 space-y-3"><RoleOption title="I'm a creator" text="Get paid to create LinkedIn content for B2B brands you actually use." selected={selected === "creator"} onClick={() => onSelect("creator")} /><RoleOption title="I'm a brand" text="Find creators, launch campaigns, and trace real pipeline back to each post." selected={selected === "brand"} onClick={() => onSelect("brand")} /></div><p className="mt-6 text-center text-xs text-[var(--muted)]">Already have an account? <button onClick={onSignIn} className="text-[var(--blue)]">Sign in</button></p><PrimaryButton disabled={!selected} onClick={onContinue} className="mt-8 w-full">Continue</PrimaryButton><button onClick={onDemo} className="mt-4 w-full text-center text-sm font-semibold text-[var(--blue)]">Explore the demo workspace</button></section>;
 }
 
 function RoleOption({ title, text, selected, onClick }: { title: string; text: string; selected: boolean; onClick: () => void }) {
   return <button onClick={onClick} className={`w-full rounded-2xl border p-5 text-left transition ${selected ? "border-[var(--blue)] bg-[var(--blue-soft)]" : "border-[var(--line-strong)] bg-white hover:border-[#9eb4f9]"}`}><p className="font-semibold">{title}</p><p className="mt-1 text-sm leading-5 text-[var(--muted)]">{text}</p></button>;
 }
 
-function SignupStep({ onContinue }: { onContinue: () => void }) {
-  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 1 OF 4</p><h1 className="mt-3 text-[26px] font-bold tracking-[-.04em]">Join Naano</h1><p className="mt-3 text-sm text-[var(--muted)]">Get paid to create LinkedIn content for B2B brands you actually use.</p><div className="mt-7 space-y-3"><SecondaryButton onClick={onContinue} className="w-full gap-3"><span className="font-bold text-[#1769ad]">in</span> Sign up with LinkedIn</SecondaryButton><SecondaryButton onClick={onContinue} className="w-full gap-3"><span className="font-bold text-[#ea4335]">G</span> Sign up with Google</SecondaryButton><SecondaryButton onClick={onContinue} className="w-full gap-3"><Mail size={18} className="text-[var(--muted)]" /> Sign up with email</SecondaryButton></div><p className="mt-5 text-center text-xs text-[var(--muted)]">Already have an account? <button className="text-[var(--blue)]">Sign in here</button></p></section>;
+function SignupStep({ onContinue, onGoogle, onSignIn }: { onContinue: () => void; onGoogle: () => void; onSignIn: () => void }) {
+  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 1 OF 4</p><h1 className="mt-3 text-[26px] font-bold tracking-[-.04em]">Join Naano</h1><p className="mt-3 text-sm text-[var(--muted)]">Get paid to create LinkedIn content for B2B brands you actually use.</p><div className="mt-7 space-y-3"><SecondaryButton onClick={onContinue} className="w-full gap-3"><span className="font-bold text-[#1769ad]">in</span> Sign up with LinkedIn</SecondaryButton><SecondaryButton onClick={onGoogle} className="w-full gap-3"><span className="font-bold text-[#ea4335]">G</span> Sign up with Google</SecondaryButton><SecondaryButton onClick={onContinue} className="w-full gap-3"><Mail size={18} className="text-[var(--muted)]" /> Sign up with email</SecondaryButton></div><p className="mt-5 text-center text-xs text-[var(--muted)]">Already have an account? <button onClick={onSignIn} className="text-[var(--blue)]">Sign in here</button></p></section>;
 }
 
-function ProfileStep({ value, onChange, onUseDemo, onContinue }: { value: string; onChange: (value: string) => void; onUseDemo: () => void; onContinue: () => void }) {
+function ProfileStep({ value, onChange, onUseDemo, imported, error, onImport, onContinue }: { value: string; onChange: (value: string) => void; onUseDemo: () => void; imported: boolean; error: string; onImport: () => void; onContinue: () => void }) {
   const valid = /^https?:\/\/(www\.)?linkedin\.com\/in\/[^/]+/.test(value);
-  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 2 OF 4</p><h1 className="mt-3 text-[25px] font-bold tracking-[-.04em]">Add your public LinkedIn profile</h1><p className="mt-3 text-sm leading-5 text-[var(--muted)]">No extension is needed. We’ll retrieve only the minimum public information required to create your Basic card.</p><label className="mt-5 block text-xs font-semibold uppercase text-[#5c6470]">Public LinkedIn profile URL<input value={value} onChange={(event) => onChange(event.target.value)} placeholder="https://www.linkedin.com/in/you" aria-invalid={value.length > 0 && !valid} className="mt-2 h-10 w-full rounded-xl border border-[var(--line-strong)] px-3 text-sm outline-none focus:border-[var(--blue)]" /></label><button onClick={onUseDemo} className="mt-2 text-xs font-semibold text-[var(--blue)]">Use the demo LinkedIn profile</button><div className="mt-4 flex gap-3 rounded-2xl border border-[#cddcff] bg-[#f4f7ff] p-4 text-xs leading-5 text-[#50617e]"><ShieldCheck size={18} className="shrink-0 text-[var(--blue)]" /><span>By clicking below, you authorize Naano to read your public profile once: name, photo, headline, country and follower count.</span></div><PrimaryButton disabled={!valid} onClick={onContinue} className="mt-4 w-full">Import my public profile</PrimaryButton></section>;
+  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 2 OF 4</p><h1 className="mt-3 text-[25px] font-bold tracking-[-.04em]">Add your public LinkedIn profile</h1><p className="mt-3 text-sm leading-5 text-[var(--muted)]">No extension is needed. We’ll retrieve only the minimum public information required to create your Basic card.</p><label className="mt-5 block text-xs font-semibold uppercase text-[#5c6470]">Public LinkedIn profile URL<input value={value} onChange={(event) => onChange(event.target.value)} placeholder="https://www.linkedin.com/in/you" aria-invalid={value.length > 0 && !valid} className="mt-2 h-10 w-full rounded-xl border border-[var(--line-strong)] px-3 text-sm outline-none focus:border-[var(--blue)]" /></label><button onClick={onUseDemo} className="mt-2 text-xs font-semibold text-[var(--blue)]">Use the demo LinkedIn profile</button>{error && <p role="alert" className="mt-3 rounded-xl border border-[#f0c9c9] bg-[#fff6f6] p-3 text-xs leading-5 text-[#9f3838]">{error}</p>}{imported ? <ImportedProfilePreview onChange={() => onChange("")} onContinue={onContinue} /> : <><div className="mt-4 flex gap-3 rounded-2xl border border-[#cddcff] bg-[#f4f7ff] p-4 text-xs leading-5 text-[#50617e]"><ShieldCheck size={18} className="shrink-0 text-[var(--blue)]" /><span>Only the seeded demo URL can be imported in this local build. No LinkedIn data is sent anywhere.</span></div><PrimaryButton disabled={!valid} onClick={onImport} className="mt-4 w-full">Import my public profile</PrimaryButton></>}</section>;
+}
+
+function ImportedProfilePreview({ onChange, onContinue }: { onChange: () => void; onContinue: () => void }) {
+  return <div className="mt-4 rounded-2xl border border-[#bfe4ce] bg-[#f4fcf7] p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[#13864d]"><Check size={14} className="mr-1 inline" />Profile imported</p><div className="mt-3 flex items-center gap-3"><div className="h-11 w-11 rounded-full bg-gradient-to-br from-[#423365] via-[#7e5b66] to-[#15213c]" /><div><p className="font-semibold">Devesh Rathod</p><p className="text-xs text-[var(--muted)]">1,027 followers · India</p></div></div><p className="mt-3 text-xs leading-5 text-[var(--muted)]">Software Engineer | Building AI Systems | Open Source Dev</p><PrimaryButton onClick={onContinue} className="mt-4 w-full">Use this profile</PrimaryButton><button onClick={onChange} className="mt-3 w-full text-center text-xs font-semibold text-[var(--blue)]">Use a different URL</button></div>;
 }
 
 function DetailsStep({ country, setCountry, selected, toggle, onContinue }: { country: string; setCountry: (value: string) => void; selected: string[]; toggle: (name: string) => void; onContinue: () => void }) {

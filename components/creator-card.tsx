@@ -4,7 +4,7 @@ import type { CreatorCardData } from "@/lib/types";
 
 export function CreatorCard({ data = creatorCard, compact = false }: { data?: CreatorCardData; compact?: boolean }) {
   return (
-    <div className={`overflow-hidden rounded-[28px] border border-[#dce3ef] bg-white text-center shadow-[0_18px_45px_rgba(31,48,87,.12)] ${compact ? "w-[290px]" : "w-full max-w-[408px]"}`}>
+    <div className={`overflow-hidden rounded-[28px] border border-[#dce3ef] bg-white text-center shadow-[0_18px_45px_rgba(31,48,87,.12)] ${compact ? "w-[390px] max-w-full" : "w-full max-w-[408px]"}`}>
       <div className="relative h-[122px] overflow-hidden bg-gradient-to-br from-[#244fe0] via-[#3268f7] to-[#7391ff] px-5 pt-5 text-white">
         <div className="absolute -left-10 bottom-[-55px] h-36 w-36 rounded-full border border-white/15" />
         <div className="absolute right-[-24px] top-[-52px] h-44 w-44 rounded-full border border-white/15" />

@@ -44,7 +44,7 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
   };
   const importProfile = () => {
     const slug = profileUrl.replace(/\/$/, "").split("/").pop()?.toLowerCase();
-    if (["demo-creator", "devesh-rathod", "devesh36"].includes(slug ?? "")) {
+    if (slug === "demo-creator") {
       setImportedProfile(true);
       setProfileError("");
     } else {

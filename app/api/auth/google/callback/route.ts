@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { redirectUri, signSession } from "@/lib/auth";
+import { googleRedirectUri, signSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri(request.nextUrl.origin), grant_type: "authorization_code" }),
+      body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: googleRedirectUri(request.nextUrl.origin), grant_type: "authorization_code" }),
       cache: "no-store",
     });
     if (!tokenResponse.ok) return failure(request, "Google did not approve this sign-in. Please try again.");

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { redirectUri } from "@/lib/auth";
+import { googleRedirectUri } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const mode = request.nextUrl.searchParams.get("mode") === "signup" ? "signup" : "signin";
   const googleUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   googleUrl.searchParams.set("client_id", clientId);
-  googleUrl.searchParams.set("redirect_uri", redirectUri(request.nextUrl.origin));
+  googleUrl.searchParams.set("redirect_uri", googleRedirectUri(request.nextUrl.origin));
   googleUrl.searchParams.set("response_type", "code");
   googleUrl.searchParams.set("scope", "openid email profile");
   googleUrl.searchParams.set("access_type", "online");

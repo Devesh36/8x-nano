@@ -9,6 +9,16 @@ import { GoogleButton } from "@/components/auth";
 
 const steps = ["role", "signup", "profile", "details", "pricing", "professional", "preview"] as const;
 type Step = (typeof steps)[number];
+type ImportedProfile = {
+  provider: "linkedin";
+  id: string;
+  name: string;
+  email?: string;
+  picture?: string;
+  sourceUrl: string;
+  importedAt: number;
+  exp: number;
+};
 
 export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step }) {
   const [step, setStep] = useState<Step>(initialStep);
@@ -18,13 +28,30 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
   const [selectedIndustries, setSelectedIndustries] = useState(["AI", "Software", "Productivity"]);
   const [price, setPrice] = useState(creatorCard.price);
   const [savedProfessional, setSavedProfessional] = useState(false);
-  const [importedProfile, setImportedProfile] = useState(false);
+  const [importedProfile, setImportedProfile] = useState<ImportedProfile | null>(null);
   const [profileError, setProfileError] = useState("");
 
   const stepIndex = steps.indexOf(step);
   useEffect(() => {
-    const requestedStep = new URLSearchParams(window.location.search).get("step") as Step | null;
+    const params = new URLSearchParams(window.location.search);
+    const requestedStep = params.get("step") as Step | null;
     if (requestedStep && steps.includes(requestedStep)) setStep(requestedStep);
+    const linkedinError = params.get("linkedin_error");
+    if (linkedinError) setProfileError(linkedinError);
+    if (params.get("linkedin") === "imported") {
+      fetch("/api/auth/linkedin/session", { cache: "no-store" })
+        .then((response) => response.json() as Promise<{ profile: ImportedProfile | null }>)
+        .then(({ profile }) => {
+          if (!profile) {
+            setProfileError("The LinkedIn import has expired. Please try again.");
+            return;
+          }
+          setImportedProfile(profile);
+          setProfileUrl(profile.sourceUrl);
+          setProfileError("");
+        })
+        .catch(() => setProfileError("We could not load the imported LinkedIn profile. Please try again."));
+    }
   }, []);
 
   const goTo = (nextStep: Step) => {
@@ -38,18 +65,16 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
   const toggleIndustry = (name: string) => setSelectedIndustries((current) => current.includes(name) ? current.filter((item) => item !== name) : current.length < 3 ? [...current, name] : current);
   const updateProfileUrl = (value: string) => {
     setProfileUrl(value);
-    setImportedProfile(false);
+    setImportedProfile(null);
     setProfileError("");
   };
   const importProfile = () => {
-    const slug = profileUrl.replace(/\/$/, "").split("/").pop()?.toLowerCase();
-    if (slug === "demo-creator") {
-      setImportedProfile(true);
-      setProfileError("");
-    } else {
-      setImportedProfile(false);
-      setProfileError("Live LinkedIn import is not connected in this demo. Use the seeded demo profile to continue safely.");
+    const valid = /^https?:\/\/(www\.)?linkedin\.com\/in\/[^/]+/.test(profileUrl);
+    if (!valid) {
+      setProfileError("Enter a valid LinkedIn profile URL.");
+      return;
     }
+    window.location.assign(`/api/auth/linkedin?profileUrl=${encodeURIComponent(profileUrl)}`);
   };
 
   return (
@@ -61,7 +86,7 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
         {step === "role" && <RoleStep selected={selectedRole} onSelect={setSelectedRole} onContinue={next} onDemo={() => window.location.assign("/demo")} onSignIn={() => window.location.assign("/signin")} />}
         {step === "signup" && <SignupStep onContinue={next} onSignIn={() => window.location.assign("/signin")} />}
         {step === "profile" && <ProfileStep value={profileUrl} onChange={updateProfileUrl} onUseDemo={() => updateProfileUrl("https://www.linkedin.com/in/demo-creator")} onOpenDemo={() => window.location.assign("/demo")} imported={importedProfile} error={profileError} onImport={importProfile} onContinue={next} />}
-        {step === "details" && <DetailsStep country={country} setCountry={setCountry} selected={selectedIndustries} toggle={toggleIndustry} onContinue={next} />}
+        {step === "details" && <DetailsStep profile={importedProfile} country={country} setCountry={setCountry} selected={selectedIndustries} toggle={toggleIndustry} onContinue={next} />}
         {step === "pricing" && <PricingStep price={price} setPrice={setPrice} onContinue={next} />}
         {step === "professional" && <ProfessionalStep saved={savedProfessional} setSaved={setSavedProfessional} onContinue={next} />}
         {step === "preview" && <PreviewStep onContinue={() => window.location.assign("/creator#home")} />}
@@ -83,17 +108,19 @@ function SignupStep({ onContinue, onSignIn }: { onContinue: () => void; onSignIn
   return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 1 OF 4</p><h1 className="mt-3 text-[26px] font-bold tracking-[-.04em]">Join Naano</h1><p className="mt-3 text-sm text-[var(--muted)]">Get paid to create LinkedIn content for B2B brands you actually use.</p><div className="mt-7 space-y-3"><SecondaryButton onClick={onContinue} className="w-full gap-3"><span className="font-bold text-[#1769ad]">in</span> Sign up with LinkedIn</SecondaryButton><GoogleButton mode="signup" /><SecondaryButton onClick={onContinue} className="w-full gap-3"><Mail size={18} className="text-[var(--muted)]" /> Sign up with email</SecondaryButton></div><p className="mt-5 text-center text-xs text-[var(--muted)]">Already have an account? <button onClick={onSignIn} className="text-[var(--blue)]">Sign in here</button></p></section>;
 }
 
-function ProfileStep({ value, onChange, onUseDemo, onOpenDemo, imported, error, onImport, onContinue }: { value: string; onChange: (value: string) => void; onUseDemo: () => void; onOpenDemo: () => void; imported: boolean; error: string; onImport: () => void; onContinue: () => void }) {
+function ProfileStep({ value, onChange, onUseDemo, onOpenDemo, imported, error, onImport, onContinue }: { value: string; onChange: (value: string) => void; onUseDemo: () => void; onOpenDemo: () => void; imported: ImportedProfile | null; error: string; onImport: () => void; onContinue: () => void }) {
   const valid = /^https?:\/\/(www\.)?linkedin\.com\/in\/[^/]+/.test(value);
-  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 2 OF 4</p><h1 className="mt-3 text-[25px] font-bold tracking-[-.04em]">Add your public LinkedIn profile</h1><p className="mt-3 text-sm leading-5 text-[var(--muted)]">No extension is needed. We’ll retrieve only the minimum public information required to create your Basic card.</p><label className="mt-5 block text-xs font-semibold uppercase text-[#5c6470]">Public LinkedIn profile URL<input value={value} onChange={(event) => onChange(event.target.value)} placeholder="https://www.linkedin.com/in/you" aria-invalid={value.length > 0 && !valid} className="mt-2 h-10 w-full rounded-xl border border-[var(--line-strong)] px-3 text-sm outline-none focus:border-[var(--blue)]" /></label><div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2"><button onClick={onUseDemo} className="text-xs font-semibold text-[var(--blue)]">Use the demo LinkedIn profile</button><button onClick={onOpenDemo} className="text-xs font-semibold text-[var(--blue)]">Continue as demo creator →</button></div>{error && <p role="alert" className="mt-3 rounded-xl border border-[#f0c9c9] bg-[#fff6f6] p-3 text-xs leading-5 text-[#9f3838]">{error}</p>}{imported ? <ImportedProfilePreview onChange={() => onChange("")} onContinue={onContinue} /> : <><div className="mt-4 flex gap-3 rounded-2xl border border-[#cddcff] bg-[#f4f7ff] p-4 text-xs leading-5 text-[#50617e]"><ShieldCheck size={18} className="shrink-0 text-[var(--blue)]" /><span>Live LinkedIn import is not connected in this clone demo. Use the seeded profile or continue directly as the demo creator. No LinkedIn data is sent anywhere.</span></div><PrimaryButton disabled={!valid} onClick={onImport} className="mt-4 w-full">Import my public profile</PrimaryButton></>}</section>;
+  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 2 OF 4</p><h1 className="mt-3 text-[25px] font-bold tracking-[-.04em]">Add your public LinkedIn profile</h1><p className="mt-3 text-sm leading-5 text-[var(--muted)]">No extension is needed. We’ll retrieve only the minimum public information required to create your Basic card.</p><label className="mt-5 block text-xs font-semibold uppercase text-[#5c6470]">Public LinkedIn profile URL<input value={value} onChange={(event) => onChange(event.target.value)} placeholder="https://www.linkedin.com/in/you" aria-invalid={value.length > 0 && !valid} className="mt-2 h-10 w-full rounded-xl border border-[var(--line-strong)] px-3 text-sm outline-none focus:border-[var(--blue)]" /></label><div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2"><button onClick={onUseDemo} className="text-xs font-semibold text-[var(--blue)]">Use the demo LinkedIn profile</button><button onClick={onOpenDemo} className="text-xs font-semibold text-[var(--blue)]">Continue as demo creator →</button></div>{error && <p role="alert" className="mt-3 rounded-xl border border-[#f0c9c9] bg-[#fff6f6] p-3 text-xs leading-5 text-[#9f3838]">{error}</p>}{imported ? <ImportedProfilePreview profile={imported} onChange={() => onChange("")} onContinue={onContinue} /> : <><div className="mt-4 flex gap-3 rounded-2xl border border-[#cddcff] bg-[#f4f7ff] p-4 text-xs leading-5 text-[#50617e]"><ShieldCheck size={18} className="shrink-0 text-[var(--blue)]" /><span>LinkedIn will return the profile fields available to your app after you authorize Naano. Follower counts and post history may not be available.</span></div><PrimaryButton disabled={!valid} onClick={onImport} className="mt-4 w-full">Connect LinkedIn and import</PrimaryButton></>}</section>;
 }
 
-function ImportedProfilePreview({ onChange, onContinue }: { onChange: () => void; onContinue: () => void }) {
-  return <div className="mt-4 rounded-2xl border border-[#bfe4ce] bg-[#f4fcf7] p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[#13864d]"><Check size={14} className="mr-1 inline" />Profile imported</p><div className="mt-3 flex items-center gap-3"><div className="h-11 w-11 rounded-full bg-gradient-to-br from-[#423365] via-[#7e5b66] to-[#15213c]" /><div><p className="font-semibold">Devesh Rathod</p><p className="text-xs text-[var(--muted)]">1,027 followers · India</p></div></div><p className="mt-3 text-xs leading-5 text-[var(--muted)]">Software Engineer | Building AI Systems | Open Source Dev</p><PrimaryButton onClick={onContinue} className="mt-4 w-full">Use this profile</PrimaryButton><button onClick={onChange} className="mt-3 w-full text-center text-xs font-semibold text-[var(--blue)]">Use a different URL</button></div>;
+function ImportedProfilePreview({ profile, onChange, onContinue }: { profile: ImportedProfile; onChange: () => void; onContinue: () => void }) {
+  const avatarStyle = profile.picture ? { backgroundImage: `url(${profile.picture})` } : undefined;
+  return <div className="mt-4 rounded-2xl border border-[#bfe4ce] bg-[#f4fcf7] p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[#13864d]"><Check size={14} className="mr-1 inline" />LinkedIn profile imported</p><div className="mt-3 flex items-center gap-3"><div style={avatarStyle} className="h-11 w-11 rounded-full bg-gradient-to-br from-[#423365] via-[#7e5b66] to-[#15213c] bg-cover bg-center" /><div><p className="font-semibold">{profile.name}</p>{profile.email ? <p className="text-xs text-[var(--muted)]">{profile.email}</p> : <p className="text-xs text-[var(--muted)]">Profile returned by LinkedIn</p>}</div></div><p className="mt-3 text-xs leading-5 text-[var(--muted)]">Basic profile import complete. Follower counts and post history require additional LinkedIn permissions.</p><PrimaryButton onClick={onContinue} className="mt-4 w-full">Use this profile</PrimaryButton><button onClick={onChange} className="mt-3 w-full text-center text-xs font-semibold text-[var(--blue)]">Use a different URL</button></div>;
 }
 
-function DetailsStep({ country, setCountry, selected, toggle, onContinue }: { country: string; setCountry: (value: string) => void; selected: string[]; toggle: (name: string) => void; onContinue: () => void }) {
-  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 3 OF 4</p><h1 className="mt-3 text-[25px] font-bold tracking-[-.04em]">Complete your creator card</h1><div className="mt-4 flex items-center gap-3"><div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#423365] via-[#7e5b66] to-[#15213c]" /><div><p className="text-lg font-semibold">1,027 <span className="text-sm font-normal text-[var(--muted)]">followers</span></p><p className="text-xs text-[var(--muted)]">Software Engineer | Building AI Systems | Open Source Dev</p></div></div><label className="mt-6 block text-sm font-semibold">Your country<span className="mt-1 block text-xs font-normal text-[var(--muted)]">Confirm your country before continuing.</span><div className="relative mt-2"><select value={country} onChange={(event) => setCountry(event.target.value)} className="h-10 w-full appearance-none rounded-xl border border-[var(--line-strong)] bg-white px-3 text-sm"><option>India</option><option>France</option><option>United States</option><option>United Kingdom</option></select><ChevronDown size={16} className="pointer-events-none absolute right-3 top-3" /></div></label><div className="mt-5"><p className="text-sm font-semibold">Your industries <span className="font-normal text-[var(--muted)]">(pick up to 3)</span></p><p className="mt-1 text-xs text-[var(--muted)]">Choose up to 3 industries to help relevant brands find your card.</p><div className="mt-3 flex max-h-36 flex-wrap gap-2 overflow-hidden">{industries.map((name) => <button key={name} onClick={() => toggle(name)} className={`rounded-full border px-3 py-1 text-xs ${selected.includes(name) ? "border-[#a7d9bd] bg-[#effbf4] text-[#13864d]" : "border-[var(--line)] text-[var(--subtle)]"}`}>{selected.includes(name) && <Check size={12} className="mr-1 inline" />}{name}</button>)}</div></div><PrimaryButton onClick={onContinue} className="mt-5 w-full">Continue</PrimaryButton></section>;
+function DetailsStep({ profile, country, setCountry, selected, toggle, onContinue }: { profile: ImportedProfile | null; country: string; setCountry: (value: string) => void; selected: string[]; toggle: (name: string) => void; onContinue: () => void }) {
+  const avatarStyle = profile?.picture ? { backgroundImage: `url(${profile.picture})` } : undefined;
+  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 3 OF 4</p><h1 className="mt-3 text-[25px] font-bold tracking-[-.04em]">Complete your creator card</h1><div className="mt-4 flex items-center gap-3"><div style={avatarStyle} className="h-12 w-12 rounded-full bg-gradient-to-br from-[#423365] via-[#7e5b66] to-[#15213c] bg-cover bg-center" /><div><p className="text-lg font-semibold">{profile?.name || "Devesh Rathod"}</p><p className="text-xs text-[var(--muted)]">{profile ? "Profile imported from LinkedIn" : "Software Engineer | Building AI Systems | Open Source Dev"}</p></div></div><label className="mt-6 block text-sm font-semibold">Your country<span className="mt-1 block text-xs font-normal text-[var(--muted)]">Confirm your country before continuing.</span><div className="relative mt-2"><select value={country} onChange={(event) => setCountry(event.target.value)} className="h-10 w-full appearance-none rounded-xl border border-[var(--line-strong)] bg-white px-3 text-sm"><option>India</option><option>France</option><option>United States</option><option>United Kingdom</option></select><ChevronDown size={16} className="pointer-events-none absolute right-3 top-3" /></div></label><div className="mt-5"><p className="text-sm font-semibold">Your industries <span className="font-normal text-[var(--muted)]">(pick up to 3)</span></p><p className="mt-1 text-xs text-[var(--muted)]">Choose up to 3 industries to help relevant brands find your card.</p><div className="mt-3 flex max-h-36 flex-wrap gap-2 overflow-hidden">{industries.map((name) => <button key={name} onClick={() => toggle(name)} className={`rounded-full border px-3 py-1 text-xs ${selected.includes(name) ? "border-[#a7d9bd] bg-[#effbf4] text-[#13864d]" : "border-[var(--line)] text-[var(--subtle)]"}`}>{selected.includes(name) && <Check size={12} className="mr-1 inline" />}{name}</button>)}</div></div><PrimaryButton onClick={onContinue} className="mt-5 w-full">Continue</PrimaryButton></section>;
 }
 
 function PricingStep({ price, setPrice, onContinue }: { price: number; setPrice: (value: number) => void; onContinue: () => void }) {

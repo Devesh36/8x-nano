@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { googleRedirectUri, signSession } from "@/lib/auth";
-import { ensureAccount } from "@/lib/workspace";
+import { ensureAccount, hasCompletedCreatorWorkspace } from "@/lib/workspace";
 import { mongoErrorMessage } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -50,18 +50,21 @@ export async function GET(request: NextRequest) {
     if (!user.sub || !user.email) return failure(request, "The Google account did not provide a usable email address.");
 
     const now = Date.now();
-    const role = request.cookies.get("naano-oauth-role")?.value === "brand" ? "brand" : "creator";
-    const session = signSession({ sub: user.sub, email: user.email, name: user.name || user.email.split("@")[0], picture: user.picture, role, provider: "google", iat: now, exp: now + 7 * 24 * 60 * 60 * 1000 });
+    const role: "brand" | "creator" = request.cookies.get("naano-oauth-role")?.value === "brand" ? "brand" : "creator";
+    const sessionData = { sub: user.sub, email: user.email, name: user.name || user.email.split("@")[0], picture: user.picture, role, provider: "google" as const, iat: now, exp: now + 7 * 24 * 60 * 60 * 1000 };
+    const session = signSession(sessionData);
+    let completedCreatorWorkspace = false;
     if (process.env.MONGODB_URI) {
       try {
-        await ensureAccount({ sub: user.sub, email: user.email, name: user.name || user.email.split("@")[0], picture: user.picture, role, provider: "google", iat: now, exp: now + 7 * 24 * 60 * 60 * 1000 });
+        if (role === "creator") completedCreatorWorkspace = await hasCompletedCreatorWorkspace(sessionData);
+        await ensureAccount(sessionData);
       } catch (error) {
         console.error("[auth] MongoDB workspace persistence failed", { name: error instanceof Error ? error.name : "UnknownError", code: typeof error === "object" && error && "code" in error ? error.code : undefined });
         return failure(request, `Your Google profile was received, but ${mongoErrorMessage(error)}`);
       }
     }
     const mode = request.cookies.get("naano-oauth-mode")?.value;
-    const destination = role === "brand" ? "/brand?auth=google&role=brand#overview" : mode === "signup" ? "/onboarding?step=profile&auth=google&role=creator" : "/creator?auth=google#home";
+    const destination = role === "brand" ? "/brand?auth=google&role=brand#overview" : mode === "signup" && !completedCreatorWorkspace ? "/onboarding?step=profile&auth=google&role=creator" : "/creator?auth=google#home";
     const response = NextResponse.redirect(new URL(destination, request.url));
     response.cookies.set("naano-session", session, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 7 * 24 * 60 * 60, path: "/" });
     response.cookies.delete("naano-oauth-state");

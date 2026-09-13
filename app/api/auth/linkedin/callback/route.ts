@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       const session = verifySession(googleSession);
       if (session) {
         try {
-          await saveImportedCreatorProfile(session, { name, picture: profile.picture });
+          await saveImportedCreatorProfile(session, { name, picture: profile.picture, sourceUrl });
         } catch {
           return failure(request, "The LinkedIn profile was imported, but Naano could not save it to your workspace.");
         }

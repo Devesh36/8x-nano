@@ -22,6 +22,8 @@ type DbWorkspace = {
   userId: string;
   role: WorkspaceRole;
   creatorProfile?: CreatorCardData;
+  linkedinUrl?: string;
+  onboardingComplete?: boolean;
   brand?: {
     walletBalance: number;
     metrics: { creatorsActivated: number; postsPublished: number; profilesEngaged: number; impressions: number };
@@ -38,7 +40,7 @@ export type WorkspaceSnapshot = {
   persisted: true;
   user: { id: string; name: string; email: string; picture?: string; role: WorkspaceRole };
   role: WorkspaceRole;
-  creator?: { profile: CreatorCardData };
+  creator?: { profile: CreatorCardData; linkedinUrl?: string; onboardingComplete: boolean };
   brand?: {
     walletBalance: number;
     metrics: BrandWorkspaceData["metrics"];
@@ -82,12 +84,18 @@ export async function ensureAccount(session: GoogleSession) {
   return { db, userId };
 }
 
-export async function saveImportedCreatorProfile(session: GoogleSession, profile: { name: string; picture?: string }) {
+export async function saveImportedCreatorProfile(session: GoogleSession, profile: { name: string; picture?: string; sourceUrl: string }) {
   const { db, userId } = await ensureAccount({ ...session, role: "creator" });
   await db.collection<DbWorkspace>("workspaces").updateOne(
     { _id: workspaceId(userId, "creator") },
-    { $set: { "creatorProfile.name": profile.name, "creatorProfile.avatarUrl": profile.picture, updatedAt: new Date() } },
+    { $set: { "creatorProfile.name": profile.name, "creatorProfile.avatarUrl": profile.picture, linkedinUrl: profile.sourceUrl, onboardingComplete: true, updatedAt: new Date() } },
   );
+}
+
+export async function hasCompletedCreatorWorkspace(session: GoogleSession) {
+  const db = await getDatabase();
+  const workspace = await db.collection<DbWorkspace>("workspaces").findOne({ _id: workspaceId(`google:${session.sub}`, "creator") }, { projection: { linkedinUrl: 1, onboardingComplete: 1 } });
+  return Boolean(workspace?.onboardingComplete || workspace?.linkedinUrl);
 }
 
 export async function getWorkspaceSnapshot(session: GoogleSession, role: WorkspaceRole): Promise<WorkspaceSnapshot> {
@@ -98,7 +106,7 @@ export async function getWorkspaceSnapshot(session: GoogleSession, role: Workspa
 
   const result: WorkspaceSnapshot = { persisted: true, user: { id: userId, name: user.name, email: user.email, picture: user.picture, role }, role };
   if (role === "creator") {
-    result.creator = { profile: workspace.creatorProfile || profileForSession(session) };
+    result.creator = { profile: workspace.creatorProfile || profileForSession(session), linkedinUrl: workspace.linkedinUrl, onboardingComplete: Boolean(workspace.onboardingComplete || workspace.linkedinUrl) };
     return result;
   }
 

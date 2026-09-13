@@ -23,7 +23,7 @@ npm run build   # production build
 npm run start   # serve the production build
 ```
 
-Development and production artifacts use separate directories (`.next-dev` and `.next-build`) so running a build does not break a running local development server.
+Local development uses `.next-dev`, while production builds use Next.js’s standard `.next` directory. This keeps a running development server isolated without changing Vercel’s expected build output.
 
 ## Demo paths
 

@@ -1,0 +1,29 @@
+{
+  "description": "Capture the full user prompt and final Codex response for the 8x assignment.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/deveshrathod/OpenSource/8x/nano/capture_hook.py",
+            "timeout": 3,
+            "async": false
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/deveshrathod/OpenSource/8x/nano/capture_hook.py",
+            "timeout": 3,
+            "async": false
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -35,3 +35,27 @@ export type NavSection =
   | "earnings"
   | "referrals"
   | "messages";
+
+export type BrandNavSection = "overview" | "marketplace" | "campaigns" | "collaborations" | "results" | "messages" | "billing";
+
+export type BrandCreator = {
+  name: string;
+  role: string;
+  industries: string;
+  followers: string;
+  price: number;
+  fit: number;
+  initials: string;
+  tone: string;
+};
+
+export type BrandCampaign = {
+  id: string;
+  name: string;
+  description: string;
+  status: "Active" | "Draft" | "Completed";
+  creators: number;
+  published: number;
+  budget: number;
+  created: string;
+};

@@ -1,4 +1,4 @@
-import type { CreatorCardData, NavSection } from "./types";
+import type { BrandCampaign, BrandCreator, CreatorCardData, NavSection } from "./types";
 
 export const creatorCard: CreatorCardData = {
   name: "Devesh Rathod",
@@ -41,4 +41,17 @@ export const industries = [
 export const opportunities = [
   { name: "Premium Inboxes", match: "100% match", region: "Europe · North America", deadline: "6 days", logo: "PI", industry: "Productivity" },
   { name: "OrbiSearch", match: "100% match", region: "Europe · North America", deadline: "6 days", logo: "o", industry: "Software" },
+];
+
+export const brandCreators: BrandCreator[] = [
+  { name: "Dr Bart Jaworski", role: "AI · Software · SaaS", industries: "AI · Software · SaaS", followers: "12.4K", price: 625, fit: 90, initials: "BJ", tone: "from-[#bde4f4] to-[#eaf7ff]" },
+  { name: "Josue Valles", role: "B2B · Marketing · Creative", industries: "B2B · Marketing · Creative", followers: "8.7K", price: 788, fit: 90, initials: "JV", tone: "from-[#c9cdf6] to-[#eef0ff]" },
+  { name: "Luis Rodrigues", role: "AI · Software · Sales", industries: "AI · Software · Sales", followers: "24.1K", price: 1875, fit: 90, initials: "LR", tone: "from-[#cce9d6] to-[#f0fff4]" },
+  { name: "Sandhya Mishra", role: "AI · Marketing · SaaS", industries: "AI · Marketing · SaaS", followers: "6.2K", price: 625, fit: 90, initials: "SM", tone: "from-[#bde4f4] to-[#eaf7ff]" },
+  { name: "Charlie Lass", role: "E-commerce · AI · Software", industries: "E-commerce · AI · Software", followers: "18.8K", price: 2500, fit: 90, initials: "CL", tone: "from-[#c9cdf6] to-[#eef0ff]" },
+  { name: "Petronella James", role: "HR · Leadership · B2B", industries: "HR · Leadership · B2B", followers: "4.8K", price: 490, fit: 88, initials: "PJ", tone: "from-[#cce9d6] to-[#f0fff4]" },
+];
+
+export const brandCampaigns: BrandCampaign[] = [
+  { id: "devops-brief", name: "Devesh creator brief", description: "A creator campaign for DevOps teams looking for practical systems content and trusted technical voices.", status: "Active", creators: 0, published: 0, budget: 0, created: "13 Sept 2026" },
 ];

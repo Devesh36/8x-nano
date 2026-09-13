@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
   if (oauthError) {
     if (oauthError === "access_denied") return failure(request, "LinkedIn authorization was cancelled.");
     const description = request.nextUrl.searchParams.get("error_description");
+    if (description?.toLowerCase().includes("permission scope is not valid")) {
+      return failure(request, "LinkedIn rejected the requested permissions. In the LinkedIn Developer Portal, enable Sign In with LinkedIn using OpenID Connect for this app, then try again.");
+    }
     return failure(request, description ? `LinkedIn authorization failed: ${description}` : `LinkedIn authorization failed (${oauthError}).`);
   }
   if (!code || !state || !expectedState) return failure(request, "The LinkedIn import session expired. Please try again.");

@@ -65,10 +65,9 @@ export async function GET(request: NextRequest) {
         return failure(request, `Your Google profile was received, but ${mongoErrorMessage(error)}`);
       }
     }
-    const mode = request.cookies.get("naano-oauth-mode")?.value;
     const destination = role === "brand"
       ? completedBrandWorkspace ? "/brand?auth=google&role=brand#overview" : "/onboarding?step=brand-profile&auth=google&role=brand"
-      : mode === "signup" && !completedCreatorWorkspace ? "/onboarding?step=profile&auth=google&role=creator" : "/creator?auth=google#home";
+      : completedCreatorWorkspace ? "/creator?auth=google#home" : "/onboarding?step=profile&auth=google&role=creator";
     const response = NextResponse.redirect(new URL(destination, request.url));
     response.cookies.set("naano-session", session, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 7 * 24 * 60 * 60, path: "/" });
     response.cookies.delete("naano-oauth-state");

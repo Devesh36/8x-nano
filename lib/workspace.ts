@@ -223,7 +223,11 @@ function withdrawalTimestamp(date = new Date()) {
 }
 
 function creatorEarningsForWorkspace(workspace: DbWorkspace): CreatorEarnings {
-  const payouts = workspace.creatorPayout || { payoutMethod: "stripe" as const, stripeConnected: false, withdrawals: [] };
+  const payouts = {
+    payoutMethod: workspace.creatorPayout?.payoutMethod || ("stripe" as const),
+    stripeConnected: workspace.creatorPayout?.stripeConnected || false,
+    withdrawals: workspace.creatorPayout?.withdrawals || [],
+  };
   const totalEarned = (workspace.creatorApplications || [])
     .filter((item) => item.status === "Completed")
     .reduce((total, item) => total + item.net, 0);
@@ -252,6 +256,10 @@ export async function connectCreatorStripe(session: GoogleSession) {
   await db.collection<DbWorkspace>("workspaces").updateOne(
     { _id: workspaceId(userId, "creator") },
     { $set: { "creatorPayout.payoutMethod": "stripe", "creatorPayout.stripeConnected": true, updatedAt: new Date() } },
+  );
+  await db.collection<DbWorkspace>("workspaces").updateOne(
+    { _id: workspaceId(userId, "creator"), "creatorPayout.withdrawals": { $exists: false } },
+    { $set: { "creatorPayout.withdrawals": [] } },
   );
   return getCreatorEarnings(session);
 }

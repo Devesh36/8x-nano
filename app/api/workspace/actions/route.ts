@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth";
 import { addBrandBudget, createBrandCampaign, deleteBrandCampaign } from "@/lib/workspace";
+import { mongoErrorMessage } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: "Unsupported workspace action" }, { status: 400 });
-  } catch {
-    return NextResponse.json({ error: "MongoDB is not configured or the action could not be saved" }, { status: 503 });
+  } catch (error) {
+    return NextResponse.json({ error: mongoErrorMessage(error) }, { status: 503 });
   }
 }

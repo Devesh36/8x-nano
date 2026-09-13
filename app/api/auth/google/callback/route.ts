@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { googleRedirectUri, signSession } from "@/lib/auth";
 import { ensureAccount } from "@/lib/workspace";
+import { mongoErrorMessage } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -54,8 +55,9 @@ export async function GET(request: NextRequest) {
     if (process.env.MONGODB_URI) {
       try {
         await ensureAccount({ sub: user.sub, email: user.email, name: user.name || user.email.split("@")[0], picture: user.picture, role, provider: "google", iat: now, exp: now + 7 * 24 * 60 * 60 * 1000 });
-      } catch {
-        return failure(request, "Your Google profile was received, but Naano could not save the workspace. Check the MongoDB connection and try again.");
+      } catch (error) {
+        console.error("[auth] MongoDB workspace persistence failed", { name: error instanceof Error ? error.name : "UnknownError", code: typeof error === "object" && error && "code" in error ? error.code : undefined });
+        return failure(request, `Your Google profile was received, but ${mongoErrorMessage(error)}`);
       }
     }
     const mode = request.cookies.get("naano-oauth-mode")?.value;

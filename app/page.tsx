@@ -1,5 +1,5 @@
-import { OnboardingFlow } from "@/components/onboarding";
+import { LandingPage } from "@/components/landing-page";
 
 export default function HomePage() {
-  return <OnboardingFlow />;
+  return <LandingPage />;
 }

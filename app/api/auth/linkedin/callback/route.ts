@@ -19,7 +19,12 @@ export async function GET(request: NextRequest) {
   const state = request.nextUrl.searchParams.get("state");
   const expectedState = request.cookies.get("naano-linkedin-state")?.value;
   const sourceUrl = request.cookies.get("naano-linkedin-source")?.value || "";
-  if (request.nextUrl.searchParams.get("error")) return failure(request, "LinkedIn sign-in was cancelled.");
+  const oauthError = request.nextUrl.searchParams.get("error");
+  if (oauthError) {
+    if (oauthError === "access_denied") return failure(request, "LinkedIn authorization was cancelled.");
+    const description = request.nextUrl.searchParams.get("error_description");
+    return failure(request, description ? `LinkedIn authorization failed: ${description}` : `LinkedIn authorization failed (${oauthError}).`);
+  }
   if (!code || !state || !expectedState) return failure(request, "The LinkedIn import session expired. Please try again.");
 
   const stateBuffer = Buffer.from(state);

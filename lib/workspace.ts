@@ -1,4 +1,4 @@
-import type { BrandCampaign, BrandCollaboration, BrandCreator, BrandProfile, CreatorCardData, CreatorCollaboration, CreatorOpportunity, MessageThread, WorkspaceMessage } from "@/lib/types";
+import type { BrandCampaign, BrandCollaboration, BrandCreator, BrandProfile, CreatorCardData, CreatorCollaboration, CreatorEarnings, CreatorOpportunity, CreatorWithdrawal, MessageThread, WorkspaceMessage } from "@/lib/types";
 import { creatorCard, opportunities as demoOpportunities } from "@/lib/data";
 import { getDatabase, isMongoConfigured } from "@/lib/db";
 import type { GoogleSession } from "@/lib/auth";
@@ -23,6 +23,11 @@ type DbWorkspace = {
   role: WorkspaceRole;
   creatorProfile?: CreatorCardData;
   creatorApplications?: CreatorCollaboration[];
+  creatorPayout?: {
+    payoutMethod: "stripe" | "bank";
+    stripeConnected: boolean;
+    withdrawals: CreatorWithdrawal[];
+  };
   linkedinUrl?: string;
   onboardingComplete?: boolean;
   brand?: {
@@ -56,7 +61,7 @@ export type WorkspaceSnapshot = {
   persisted: true;
   user: { id: string; name: string; email: string; picture?: string; role: WorkspaceRole };
   role: WorkspaceRole;
-  creator?: { profile: CreatorCardData; linkedinUrl?: string; onboardingComplete: boolean };
+  creator?: { profile: CreatorCardData; linkedinUrl?: string; onboardingComplete: boolean; earnings: CreatorEarnings };
   brand?: {
     walletBalance: number;
     metrics: BrandWorkspaceData["metrics"];
@@ -213,6 +218,59 @@ function creatorToBrandCreator(profile: CreatorCardData): BrandCreator {
   return { name: profile.name, role: profile.industries.join(" · "), industries: profile.industries.join(" · "), followers, price: profile.price, fit: 90, initials, tone: profile.avatarTone, avatarUrl: profile.avatarUrl };
 }
 
+function withdrawalTimestamp(date = new Date()) {
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+}
+
+function creatorEarningsForWorkspace(workspace: DbWorkspace): CreatorEarnings {
+  const payouts = workspace.creatorPayout || { payoutMethod: "stripe" as const, stripeConnected: false, withdrawals: [] };
+  const totalEarned = (workspace.creatorApplications || [])
+    .filter((item) => item.status === "Completed")
+    .reduce((total, item) => total + item.net, 0);
+  const inTransit = payouts.withdrawals
+    .filter((withdrawal) => withdrawal.status === "Pending")
+    .reduce((total, withdrawal) => total + withdrawal.amount, 0);
+  return {
+    totalEarned,
+    inTransit,
+    available: Math.max(totalEarned - inTransit, 0),
+    payoutMethod: payouts.payoutMethod,
+    stripeConnected: payouts.stripeConnected,
+    withdrawals: payouts.withdrawals,
+  };
+}
+
+export async function getCreatorEarnings(session: GoogleSession) {
+  const { db, userId } = await ensureAccount({ ...session, role: "creator" });
+  const workspace = await db.collection<DbWorkspace>("workspaces").findOne({ _id: workspaceId(userId, "creator") });
+  if (!workspace) throw new Error("Creator workspace could not be loaded");
+  return creatorEarningsForWorkspace(workspace);
+}
+
+export async function connectCreatorStripe(session: GoogleSession) {
+  const { db, userId } = await ensureAccount({ ...session, role: "creator" });
+  await db.collection<DbWorkspace>("workspaces").updateOne(
+    { _id: workspaceId(userId, "creator") },
+    { $set: { "creatorPayout.payoutMethod": "stripe", "creatorPayout.stripeConnected": true, updatedAt: new Date() } },
+  );
+  return getCreatorEarnings(session);
+}
+
+export async function requestCreatorWithdrawal(session: GoogleSession) {
+  const { db, userId } = await ensureAccount({ ...session, role: "creator" });
+  const workspace = await db.collection<DbWorkspace>("workspaces").findOne({ _id: workspaceId(userId, "creator") });
+  if (!workspace) throw new Error("Creator workspace could not be loaded");
+  const earnings = creatorEarningsForWorkspace(workspace);
+  if (!earnings.stripeConnected || earnings.payoutMethod !== "stripe") throw new Error("Connect Stripe before requesting a withdrawal");
+  if (earnings.available <= 0) throw new Error("There are no cleared earnings available to withdraw yet");
+  const withdrawal: CreatorWithdrawal = { id: `withdrawal-${Date.now()}`, amount: earnings.available, method: "stripe", status: "Pending", requestedAt: withdrawalTimestamp() };
+  await db.collection<DbWorkspace>("workspaces").updateOne(
+    { _id: workspaceId(userId, "creator") },
+    { $push: { "creatorPayout.withdrawals": withdrawal }, $set: { updatedAt: new Date() } },
+  );
+  return getCreatorEarnings(session);
+}
+
 export async function ensureAccount(session: GoogleSession) {
   const db = await getDatabase();
   const now = new Date();
@@ -227,7 +285,7 @@ export async function ensureAccount(session: GoogleSession) {
   const workspaces = db.collection<DbWorkspace>("workspaces");
   const insertFields: Partial<DbWorkspace> = session.role === "brand"
     ? { brand: { walletBalance: 0, metrics: { creatorsActivated: 0, postsPublished: 0, profilesEngaged: 0, impressions: 0 }, campaigns: [], collaborations: [], todoState: [] } }
-    : { creatorProfile: profileForSession(session) };
+    : { creatorProfile: profileForSession(session), creatorPayout: { payoutMethod: "stripe", stripeConnected: false, withdrawals: [] } };
   await workspaces.updateOne(
     { _id: workspaceId(userId, session.role) },
     { $set: { userId, role: session.role, updatedAt: now }, $setOnInsert: { ...insertFields, createdAt: now } },
@@ -274,7 +332,7 @@ export async function getWorkspaceSnapshot(session: GoogleSession, role: Workspa
 
   const result: WorkspaceSnapshot = { persisted: true, user: { id: userId, name: user.name, email: user.email, picture: user.picture, role }, role };
   if (role === "creator") {
-    result.creator = { profile: workspace.creatorProfile || profileForSession(session), linkedinUrl: workspace.linkedinUrl, onboardingComplete: Boolean(workspace.onboardingComplete || workspace.linkedinUrl) };
+    result.creator = { profile: workspace.creatorProfile || profileForSession(session), linkedinUrl: workspace.linkedinUrl, onboardingComplete: Boolean(workspace.onboardingComplete || workspace.linkedinUrl), earnings: creatorEarningsForWorkspace(workspace) };
     return result;
   }
 

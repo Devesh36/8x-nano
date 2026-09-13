@@ -25,6 +25,34 @@ export type CreatorCardData = CreatorProfile & {
   rewardPeriod: string;
 };
 
+export type CreatorOpportunity = {
+  id: string;
+  name: string;
+  brandName: string;
+  description: string;
+  match: string;
+  region: string;
+  deadline: string;
+  logo: string;
+  industry: string;
+  compensation: number;
+  channel: "LinkedIn";
+};
+
+export type CreatorCollaboration = {
+  id: string;
+  opportunityId: string;
+  brandName: string;
+  campaignName: string;
+  status: "Applications sent" | "Active" | "Needs action" | "Declined" | "Completed";
+  performance: string;
+  nextAction: string;
+  net: number;
+  deadline: string;
+  appliedAt: string;
+  logo: string;
+};
+
 export type NavSection =
   | "home"
   | "profile"

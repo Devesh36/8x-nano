@@ -1,6 +1,6 @@
-import type { BrandCampaign, BrandCreator, CreatorCardData } from "@/lib/types";
-import { creatorCard } from "@/lib/data";
-import { getDatabase } from "@/lib/db";
+import type { BrandCampaign, BrandCreator, CreatorCardData, CreatorCollaboration, CreatorOpportunity } from "@/lib/types";
+import { creatorCard, opportunities as demoOpportunities } from "@/lib/data";
+import { getDatabase, isMongoConfigured } from "@/lib/db";
 import type { GoogleSession } from "@/lib/auth";
 
 export type WorkspaceRole = "creator" | "brand";
@@ -22,6 +22,7 @@ type DbWorkspace = {
   userId: string;
   role: WorkspaceRole;
   creatorProfile?: CreatorCardData;
+  creatorApplications?: CreatorCollaboration[];
   linkedinUrl?: string;
   onboardingComplete?: boolean;
   brand?: {
@@ -36,6 +37,8 @@ type DbWorkspace = {
 
 type BrandWorkspaceData = NonNullable<DbWorkspace["brand"]>;
 
+type DbOpportunity = CreatorOpportunity & { _id: string; createdAt: Date; updatedAt: Date };
+
 export type WorkspaceSnapshot = {
   persisted: true;
   user: { id: string; name: string; email: string; picture?: string; role: WorkspaceRole };
@@ -48,6 +51,51 @@ export type WorkspaceSnapshot = {
     creators: BrandCreator[];
   };
 };
+
+function collaborationForOpportunity(opportunity: CreatorOpportunity): CreatorCollaboration {
+  return {
+    id: `application-${opportunity.id}`,
+    opportunityId: opportunity.id,
+    brandName: opportunity.brandName,
+    campaignName: opportunity.name,
+    status: "Applications sent",
+    performance: "Not started",
+    nextAction: "Wait for the brand to review your application",
+    net: opportunity.compensation,
+    deadline: opportunity.deadline,
+    appliedAt: new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date()),
+    logo: opportunity.logo,
+  };
+}
+
+export async function getCreatorOpportunities() {
+  if (!isMongoConfigured()) return demoOpportunities;
+  const db = await getDatabase();
+  const collection = db.collection<DbOpportunity>("opportunities");
+  const now = new Date();
+  await Promise.all(demoOpportunities.map((opportunity) => collection.updateOne({ _id: opportunity.id }, { $set: { ...opportunity, updatedAt: now }, $setOnInsert: { createdAt: now } }, { upsert: true })));
+  return collection.find({}).sort({ createdAt: 1 }).toArray();
+}
+
+export async function getCreatorCollaborations(session: GoogleSession) {
+  const { db, userId } = await ensureAccount({ ...session, role: "creator" });
+  const workspace = await db.collection<DbWorkspace>("workspaces").findOne({ _id: workspaceId(userId, "creator") }, { projection: { creatorApplications: 1 } });
+  return workspace?.creatorApplications || [];
+}
+
+export async function applyToCreatorOpportunity(session: GoogleSession, opportunityId: string) {
+  const available = await getCreatorOpportunities();
+  const opportunity = available.find((item) => item.id === opportunityId);
+  if (!opportunity) throw new Error("Opportunity not found");
+  const { db, userId } = await ensureAccount({ ...session, role: "creator" });
+  const collaboration = collaborationForOpportunity(opportunity);
+  await db.collection<DbWorkspace>("workspaces").updateOne(
+    { _id: workspaceId(userId, "creator"), "creatorApplications.opportunityId": { $ne: opportunityId } },
+    { $push: { creatorApplications: collaboration }, $set: { updatedAt: new Date() } },
+  );
+  const workspace = await db.collection<DbWorkspace>("workspaces").findOne({ _id: workspaceId(userId, "creator") }, { projection: { creatorApplications: 1 } });
+  return workspace?.creatorApplications?.find((item) => item.opportunityId === opportunityId) || collaboration;
+}
 
 const workspaceId = (userId: string, role: WorkspaceRole) => `${userId}:${role}`;
 

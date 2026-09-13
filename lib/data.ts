@@ -1,4 +1,4 @@
-import type { BrandCampaign, BrandCreator, CreatorCardData, NavSection } from "./types";
+import type { BrandCampaign, BrandCreator, CreatorCardData, CreatorOpportunity, NavSection } from "./types";
 
 export const creatorCard: CreatorCardData = {
   name: "Devesh Rathod",
@@ -38,9 +38,10 @@ export const industries = [
   "Design", "Real Estate / PropTech", "LegalTech",
 ];
 
-export const opportunities = [
-  { name: "Premium Inboxes", match: "100% match", region: "Europe · North America", deadline: "6 days", logo: "PI", industry: "Productivity" },
-  { name: "OrbiSearch", match: "100% match", region: "Europe · North America", deadline: "6 days", logo: "o", industry: "Software" },
+export const opportunities: CreatorOpportunity[] = [
+  { id: "premium-inboxes", name: "Premium Inboxes", brandName: "Premium Inboxes", description: "Show how modern teams can turn a crowded inbox into a calm, focused workflow.", match: "100% match", region: "Europe · North America", deadline: "6 days", logo: "PI", industry: "Productivity", compensation: 450, channel: "LinkedIn" },
+  { id: "orbisearch", name: "OrbiSearch", brandName: "OrbiSearch", description: "Create a practical post about finding trustworthy company and buyer research in less time.", match: "96% match", region: "Europe · North America", deadline: "9 days", logo: "o", industry: "Software", compensation: 625, channel: "LinkedIn" },
+  { id: "relay-ai", name: "Relay AI", brandName: "Relay AI", description: "Explain one useful way engineering teams can use AI agents without losing operational control.", match: "92% match", region: "North America", deadline: "12 days", logo: "R", industry: "AI", compensation: 800, channel: "LinkedIn" },
 ];
 
 export const brandCreators: BrandCreator[] = [

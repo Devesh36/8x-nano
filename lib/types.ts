@@ -121,23 +121,6 @@ export type MessageThread = {
   updatedAt: string;
 };
 
-export type CreatorWithdrawal = {
-  id: string;
-  amount: number;
-  method: "stripe" | "bank";
-  status: "Pending" | "Paid";
-  requestedAt: string;
-};
-
-export type CreatorEarnings = {
-  totalEarned: number;
-  inTransit: number;
-  available: number;
-  payoutMethod: "stripe" | "bank";
-  stripeConnected: boolean;
-  withdrawals: CreatorWithdrawal[];
-};
-
 export type BrandCampaign = {
   id: string;
   name: string;

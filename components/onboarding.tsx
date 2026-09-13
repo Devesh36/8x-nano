@@ -5,7 +5,7 @@ import { ArrowLeft, Check, ChevronDown, Globe2, Mail, ShieldCheck, Sparkles } fr
 import { creatorCard, industries } from "@/lib/data";
 import { BrandSymbol, CreatorCard } from "@/components/creator-card";
 import { PrimaryButton, SecondaryButton } from "@/components/ui";
-import { GoogleAuthModal } from "@/components/auth";
+import { GoogleButton } from "@/components/auth";
 
 const steps = ["role", "signup", "profile", "details", "pricing", "professional", "preview"] as const;
 type Step = (typeof steps)[number];
@@ -18,7 +18,6 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
   const [selectedIndustries, setSelectedIndustries] = useState(["AI", "Software", "Productivity"]);
   const [price, setPrice] = useState(creatorCard.price);
   const [savedProfessional, setSavedProfessional] = useState(false);
-  const [googleOpen, setGoogleOpen] = useState(false);
   const [importedProfile, setImportedProfile] = useState(false);
   const [profileError, setProfileError] = useState("");
 
@@ -61,7 +60,7 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
         {step !== "role" && step !== "preview" && <button onClick={previous} className="mb-4 inline-flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--ink)]"><ArrowLeft size={15} /> {step === "profile" ? "Back to my account" : "Back"}</button>}
         {step !== "role" && step !== "professional" && step !== "preview" && <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP {stepIndex} OF 4</p>}
         {step === "role" && <RoleStep selected={selectedRole} onSelect={setSelectedRole} onContinue={next} onDemo={() => window.location.assign("/demo")} onSignIn={() => window.location.assign("/signin")} />}
-        {step === "signup" && <SignupStep onContinue={next} onGoogle={() => setGoogleOpen(true)} onSignIn={() => window.location.assign("/signin")} />}
+        {step === "signup" && <SignupStep onContinue={next} onSignIn={() => window.location.assign("/signin")} />}
         {step === "profile" && <ProfileStep value={profileUrl} onChange={updateProfileUrl} onUseDemo={() => updateProfileUrl("https://www.linkedin.com/in/demo-creator")} imported={importedProfile} error={profileError} onImport={importProfile} onContinue={next} />}
         {step === "details" && <DetailsStep country={country} setCountry={setCountry} selected={selectedIndustries} toggle={toggleIndustry} onContinue={next} />}
         {step === "pricing" && <PricingStep price={price} setPrice={setPrice} onContinue={next} />}
@@ -69,7 +68,6 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
         {step === "preview" && <PreviewStep onContinue={() => window.location.assign("/creator#home")} />}
       </div>
       <AssistantBar label={step === "role" ? "What would you like to see?" : "What would you like to do?"} />
-      {googleOpen && <GoogleAuthModal mode="signup" onClose={() => setGoogleOpen(false)} onSuccess={() => { setGoogleOpen(false); next(); }} />}
     </main>
   );
 }
@@ -82,8 +80,8 @@ function RoleOption({ title, text, selected, onClick }: { title: string; text: s
   return <button onClick={onClick} className={`w-full rounded-2xl border p-5 text-left transition ${selected ? "border-[var(--blue)] bg-[var(--blue-soft)]" : "border-[var(--line-strong)] bg-white hover:border-[#9eb4f9]"}`}><p className="font-semibold">{title}</p><p className="mt-1 text-sm leading-5 text-[var(--muted)]">{text}</p></button>;
 }
 
-function SignupStep({ onContinue, onGoogle, onSignIn }: { onContinue: () => void; onGoogle: () => void; onSignIn: () => void }) {
-  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 1 OF 4</p><h1 className="mt-3 text-[26px] font-bold tracking-[-.04em]">Join Naano</h1><p className="mt-3 text-sm text-[var(--muted)]">Get paid to create LinkedIn content for B2B brands you actually use.</p><div className="mt-7 space-y-3"><SecondaryButton onClick={onContinue} className="w-full gap-3"><span className="font-bold text-[#1769ad]">in</span> Sign up with LinkedIn</SecondaryButton><SecondaryButton onClick={onGoogle} className="w-full gap-3"><span className="font-bold text-[#ea4335]">G</span> Sign up with Google</SecondaryButton><SecondaryButton onClick={onContinue} className="w-full gap-3"><Mail size={18} className="text-[var(--muted)]" /> Sign up with email</SecondaryButton></div><p className="mt-5 text-center text-xs text-[var(--muted)]">Already have an account? <button onClick={onSignIn} className="text-[var(--blue)]">Sign in here</button></p></section>;
+function SignupStep({ onContinue, onSignIn }: { onContinue: () => void; onSignIn: () => void }) {
+  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 1 OF 4</p><h1 className="mt-3 text-[26px] font-bold tracking-[-.04em]">Join Naano</h1><p className="mt-3 text-sm text-[var(--muted)]">Get paid to create LinkedIn content for B2B brands you actually use.</p><div className="mt-7 space-y-3"><SecondaryButton onClick={onContinue} className="w-full gap-3"><span className="font-bold text-[#1769ad]">in</span> Sign up with LinkedIn</SecondaryButton><GoogleButton mode="signup" /><SecondaryButton onClick={onContinue} className="w-full gap-3"><Mail size={18} className="text-[var(--muted)]" /> Sign up with email</SecondaryButton></div><p className="mt-5 text-center text-xs text-[var(--muted)]">Already have an account? <button onClick={onSignIn} className="text-[var(--blue)]">Sign in here</button></p></section>;
 }
 
 function ProfileStep({ value, onChange, onUseDemo, imported, error, onImport, onContinue }: { value: string; onChange: (value: string) => void; onUseDemo: () => void; imported: boolean; error: string; onImport: () => void; onContinue: () => void }) {

@@ -31,6 +31,7 @@ export function CreatorWorkspace() {
       window.localStorage.setItem("naano-demo-session", JSON.stringify(demoUser));
     }
     fetch("/api/auth/session").then((response) => response.json()).then((data: { user?: { name: string; email: string; picture?: string } | null }) => setAccount(data.user || null)).catch(() => undefined);
+    fetch("/api/workspace?role=creator", { cache: "no-store" }).then((response) => { if (!response.ok) throw new Error("workspace unavailable"); return response.json(); }).then((data: { creator?: { profile: CreatorCardData } }) => { const profile = data.creator?.profile; if (profile) { setCard(profile); setAccount((current) => current || { name: profile.name, email: "Naano account", picture: profile.avatarUrl }); } }).catch(() => undefined);
     if (!isDemo) {
       fetch("/api/auth/linkedin/session", { cache: "no-store" })
         .then((response) => response.json() as Promise<{ profile: LinkedInImportedProfile | null }>)

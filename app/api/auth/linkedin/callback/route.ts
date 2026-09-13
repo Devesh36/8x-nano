@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { linkedinRedirectUri, signValue } from "@/lib/auth";
+import { linkedinRedirectUri, signValue, verifySession } from "@/lib/auth";
+import { saveImportedCreatorProfile } from "@/lib/workspace";
 
 export const runtime = "nodejs";
 
@@ -58,6 +59,17 @@ export async function GET(request: NextRequest) {
 
     const now = Date.now();
     const importedProfile: ImportedProfile = { provider: "linkedin", id: profile.sub, name, email: profile.email, picture: profile.picture, sourceUrl, importedAt: now, exp: now + 10 * 60 * 1000 };
+    const googleSession = request.cookies.get("naano-session")?.value;
+    if (googleSession) {
+      const session = verifySession(googleSession);
+      if (session) {
+        try {
+          await saveImportedCreatorProfile(session, { name, picture: profile.picture });
+        } catch {
+          return failure(request, "The LinkedIn profile was imported, but Naano could not save it to your workspace.");
+        }
+      }
+    }
     const response = NextResponse.redirect(new URL("/onboarding?step=profile&linkedin=imported", request.url));
     response.cookies.set("naano-linkedin-import", signValue(importedProfile), { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 600, path: "/" });
     response.cookies.delete("naano-linkedin-state");

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { googleRedirectUri, signSession } from "@/lib/auth";
+import { ensureAccount } from "@/lib/workspace";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,7 @@ type GoogleUserInfo = { sub: string; email?: string; name?: string; picture?: st
 function failure(request: NextRequest, message: string) {
   const url = new URL("/signin", request.url);
   url.searchParams.set("error", message);
+  if (request.cookies.get("naano-oauth-role")?.value === "brand") url.searchParams.set("role", "brand");
   return NextResponse.redirect(url);
 }
 
@@ -49,6 +51,13 @@ export async function GET(request: NextRequest) {
     const now = Date.now();
     const role = request.cookies.get("naano-oauth-role")?.value === "brand" ? "brand" : "creator";
     const session = signSession({ sub: user.sub, email: user.email, name: user.name || user.email.split("@")[0], picture: user.picture, role, provider: "google", iat: now, exp: now + 7 * 24 * 60 * 60 * 1000 });
+    if (process.env.MONGODB_URI) {
+      try {
+        await ensureAccount({ sub: user.sub, email: user.email, name: user.name || user.email.split("@")[0], picture: user.picture, role, provider: "google", iat: now, exp: now + 7 * 24 * 60 * 60 * 1000 });
+      } catch {
+        return failure(request, "Your Google profile was received, but Naano could not save the workspace. Check the MongoDB connection and try again.");
+      }
+    }
     const mode = request.cookies.get("naano-oauth-mode")?.value;
     const destination = role === "brand" ? "/brand?auth=google&role=brand#overview" : mode === "signup" ? "/onboarding?step=profile&auth=google&role=creator" : "/creator?auth=google#home";
     const response = NextResponse.redirect(new URL(destination, request.url));

@@ -47,6 +47,7 @@ export type BrandCreator = {
   fit: number;
   initials: string;
   tone: string;
+  avatarUrl?: string;
 };
 
 export type BrandCampaign = {

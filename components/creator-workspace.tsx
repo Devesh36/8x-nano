@@ -13,22 +13,25 @@ export function CreatorWorkspace() {
   const [section, setSection] = useState<NavSection>("home");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [tour, setTour] = useState(false);
+  const [demo, setDemo] = useState(false);
 
   useEffect(() => {
     const sync = () => setSection((window.location.hash.replace("#", "") as NavSection) || "home");
     sync();
     window.addEventListener("hashchange", sync);
-    setTour(new URLSearchParams(window.location.search).get("tour") === "1");
+    const params = new URLSearchParams(window.location.search);
+    setTour(params.get("tour") === "1");
+    setDemo(params.get("demo") === "1");
     return () => window.removeEventListener("hashchange", sync);
   }, []);
 
   const navigate = (id: NavSection) => { window.location.hash = id; setMobileOpen(false); };
 
-  return <div className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]"><TopBar onMenu={() => setMobileOpen(true)} /><Sidebar active={section} onNavigate={navigate} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} /><main className="min-h-screen pt-16 lg:pl-[210px]"><div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 lg:px-10">{section === "home" && <Overview onNavigate={navigate} />}{section === "profile" && <ProfilePage />}{section === "opportunities" && <OpportunitiesPage />}{section === "collabs" && <CollaborationsPage />}{section === "analytics" && <AnalyticsPage />}{section === "community" && <CommunityPage />}{section === "earnings" && <EarningsPage />}{section === "referrals" && <ReferralsPage />}{section === "messages" && <MessagesPage />}</div></main><AssistantBar />{tour && <TourOverlay section={section} onClose={() => { window.history.replaceState({}, "", "/creator#home"); setTour(false); }} onNavigate={navigate} />}</div>;
+  return <div className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]"><TopBar onMenu={() => setMobileOpen(true)} demo={demo} /><Sidebar active={section} onNavigate={navigate} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} /><main className="min-h-screen pt-16 lg:pl-[210px]"><div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 lg:px-10">{section === "home" && <Overview onNavigate={navigate} />}{section === "profile" && <ProfilePage />}{section === "opportunities" && <OpportunitiesPage />}{section === "collabs" && <CollaborationsPage />}{section === "analytics" && <AnalyticsPage />}{section === "community" && <CommunityPage />}{section === "earnings" && <EarningsPage />}{section === "referrals" && <ReferralsPage />}{section === "messages" && <MessagesPage />}</div></main><AssistantBar />{tour && <TourOverlay section={section} onClose={() => { window.history.replaceState({}, "", "/creator#home"); setTour(false); }} onNavigate={navigate} />}</div>;
 }
 
-function TopBar({ onMenu }: { onMenu: () => void }) {
-  return <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-[var(--line)] bg-white/95 px-4 backdrop-blur lg:pl-[232px] lg:pr-6"><button className="rounded-lg p-2 lg:hidden" onClick={onMenu} aria-label="Open navigation"><Menu size={20} /></button><div className="flex items-center gap-2 lg:ml-auto"><button className="hidden items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-xs sm:flex"><WalletCards size={13} /> €0</button><button className="rounded-lg border border-[var(--line)] px-2.5 py-2 text-xs font-semibold">EN <span className="ml-1 text-[var(--subtle)]">FR</span></button><button className="rounded-lg border border-[var(--line)] p-2" aria-label="Notifications"><Bell size={15} /></button><div className="h-8 w-8 rounded-full border-2 border-white bg-gradient-to-br from-[#423365] via-[#7e5b66] to-[#15213c] shadow-sm" /></div></header>;
+function TopBar({ onMenu, demo }: { onMenu: () => void; demo: boolean }) {
+  return <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-[var(--line)] bg-white/95 px-4 backdrop-blur lg:pl-[232px] lg:pr-6"><button className="rounded-lg p-2 lg:hidden" onClick={onMenu} aria-label="Open navigation"><Menu size={20} /></button><div className="flex items-center gap-2 lg:ml-auto">{demo && <span className="hidden rounded-full border border-[#cbd8ff] bg-[var(--blue-soft)] px-3 py-1.5 text-[10px] font-semibold text-[var(--blue)] sm:inline">Demo creator</span>}<button className="hidden items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-xs sm:flex"><WalletCards size={13} /> €0</button><button className="rounded-lg border border-[var(--line)] px-2.5 py-2 text-xs font-semibold">EN <span className="ml-1 text-[var(--subtle)]">FR</span></button><button className="rounded-lg border border-[var(--line)] p-2" aria-label="Notifications"><Bell size={15} /></button><div className="h-8 w-8 rounded-full border-2 border-white bg-gradient-to-br from-[#423365] via-[#7e5b66] to-[#15213c] shadow-sm" /></div></header>;
 }
 
 function Sidebar({ active, onNavigate, mobileOpen, onClose }: { active: NavSection; onNavigate: (id: NavSection) => void; mobileOpen: boolean; onClose: () => void }) {

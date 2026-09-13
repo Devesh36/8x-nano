@@ -12,6 +12,13 @@ export const creatorCard: CreatorCardData = {
   rewardPeriod: "3 months",
 };
 
+export const demoUser = {
+  id: "demo-creator",
+  email: "demo@naano.local",
+  role: "creator" as const,
+  profile: creatorCard,
+};
+
 export const navItems: { id: NavSection; label: string; icon: string }[] = [
   { id: "home", label: "Overview", icon: "grid" },
   { id: "profile", label: "My card", icon: "card" },

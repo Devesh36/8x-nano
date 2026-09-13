@@ -104,6 +104,23 @@ export type BrandCollaboration = {
   updatedAt: string;
 };
 
+export type WorkspaceMessage = {
+  id: string;
+  senderId: string;
+  senderName: string;
+  body: string;
+  sentAt: string;
+};
+
+export type MessageThread = {
+  id: string;
+  type: "support" | "collaboration";
+  title: string;
+  subtitle: string;
+  messages: WorkspaceMessage[];
+  updatedAt: string;
+};
+
 export type BrandCampaign = {
   id: string;
   name: string;

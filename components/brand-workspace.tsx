@@ -7,6 +7,17 @@ import type { BrandCampaign, BrandCollaboration, BrandCreator, BrandNavSection, 
 import { BrandSymbol } from "@/components/creator-card";
 import { AccountMenu } from "@/components/account-menu";
 import { PrimaryButton, SecondaryButton, StatusPill, Surface } from "@/components/ui";
+import { WorkspaceMessages } from "@/components/workspace-messages";
+
+const PersistentBrandMessagesPage = () => <>
+  <BrandPageTitle title="Messages" description="Keep creator and Naano conversations together." />
+  <WorkspaceMessages variant="brand" />
+</>;
+
+// The original scaffolded composer remains below for its supporting visual primitives.
+// Replace it at module initialization with the persisted shared inbox.
+// @ts-expect-error Function declarations are runtime-reassignable bindings.
+BrandMessagesPage = PersistentBrandMessagesPage;
 
 const navItems: { id: BrandNavSection; label: string; icon: typeof Grid2X2 }[] = [
   { id: "overview", label: "Overview", icon: Grid2X2 },

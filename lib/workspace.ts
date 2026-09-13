@@ -1,4 +1,4 @@
-import type { BrandCampaign, BrandCollaboration, BrandCreator, BrandProfile, CreatorCardData, CreatorCollaboration, CreatorOpportunity } from "@/lib/types";
+import type { BrandCampaign, BrandCollaboration, BrandCreator, BrandProfile, CreatorCardData, CreatorCollaboration, CreatorOpportunity, MessageThread, WorkspaceMessage } from "@/lib/types";
 import { creatorCard, opportunities as demoOpportunities } from "@/lib/data";
 import { getDatabase, isMongoConfigured } from "@/lib/db";
 import type { GoogleSession } from "@/lib/auth";
@@ -40,6 +40,17 @@ type DbWorkspace = {
 type BrandWorkspaceData = NonNullable<DbWorkspace["brand"]>;
 
 type DbOpportunity = CreatorOpportunity & { _id: string; createdAt: Date; updatedAt: Date; brandWorkspaceId?: string };
+
+type DbMessageThread = {
+  _id: string;
+  participantIds: string[];
+  type: MessageThread["type"];
+  title: string;
+  subtitle: string;
+  messages: WorkspaceMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export type WorkspaceSnapshot = {
   persisted: true;
@@ -141,6 +152,56 @@ export async function applyToCreatorOpportunity(session: GoogleSession, opportun
 }
 
 const workspaceId = (userId: string, role: WorkspaceRole) => `${userId}:${role}`;
+
+function messageTimestamp(date = new Date()) {
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
+async function ensureSupportThread(db: Awaited<ReturnType<typeof getDatabase>>, userId: string) {
+  const now = new Date();
+  const greeting: WorkspaceMessage = { id: `support-welcome-${userId}`, senderId: "naano-support", senderName: "Naano support", body: "Hi, I’m the Naano assistant. Ask a question here and our team can step in when needed.", sentAt: messageTimestamp(now) };
+  await db.collection<DbMessageThread>("messageThreads").updateOne(
+    { _id: `support:${userId}` },
+    { $setOnInsert: { participantIds: [userId], type: "support", title: "Naano support", subtitle: "Product help and account questions", messages: [greeting], createdAt: now, updatedAt: now } },
+    { upsert: true },
+  );
+}
+
+function toMessageThread(thread: DbMessageThread): MessageThread {
+  return { id: thread._id, type: thread.type, title: thread.title, subtitle: thread.subtitle, messages: thread.messages, updatedAt: messageTimestamp(thread.updatedAt) };
+}
+
+export async function getMessageThreads(session: GoogleSession) {
+  const { db, userId } = await ensureAccount(session);
+  await ensureSupportThread(db, userId);
+  const threads = await db.collection<DbMessageThread>("messageThreads").find({ participantIds: userId }).sort({ updatedAt: -1 }).toArray();
+  return threads.map(toMessageThread);
+}
+
+export async function sendWorkspaceMessage(session: GoogleSession, threadId: string, body: string) {
+  const content = body.trim().replace(/\s+/g, " ").slice(0, 2000);
+  if (!content) throw new Error("A message cannot be empty");
+  const { db, userId } = await ensureAccount(session);
+  await ensureSupportThread(db, userId);
+  const thread = await db.collection<DbMessageThread>("messageThreads").findOne({ _id: threadId, participantIds: userId });
+  if (!thread) throw new Error("Message thread not found");
+  const now = new Date();
+  const message: WorkspaceMessage = { id: `message-${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`, senderId: userId, senderName: session.name, body: content, sentAt: messageTimestamp(now) };
+  const messages = [message];
+  if (thread.type === "support") messages.push({ id: `support-reply-${now.getTime()}`, senderId: "naano-support", senderName: "Naano support", body: "Thanks — we received your message. A Naano teammate will follow up here if you need more help.", sentAt: messageTimestamp(now) });
+  await db.collection<DbMessageThread>("messageThreads").updateOne({ _id: threadId, participantIds: userId }, { $push: { messages: { $each: messages } }, $set: { updatedAt: now } });
+  return getMessageThreads(session);
+}
+
+async function createCollaborationMessageThread(db: Awaited<ReturnType<typeof getDatabase>>, brandUserId: string, brandName: string, collaboration: BrandCollaboration) {
+  const now = new Date();
+  const welcome: WorkspaceMessage = { id: `collaboration-welcome-${collaboration.id}`, senderId: "naano-support", senderName: "Naano", body: `${brandName} accepted this collaboration. Use this thread to agree the content angle, delivery date and any campaign details.`, sentAt: messageTimestamp(now) };
+  await db.collection<DbMessageThread>("messageThreads").updateOne(
+    { _id: `collaboration:${collaboration.id}` },
+    { $setOnInsert: { participantIds: [brandUserId, collaboration.creatorUserId], type: "collaboration", title: collaboration.campaignName, subtitle: `${collaboration.creatorName} · €${collaboration.amount}/post`, messages: [welcome], createdAt: now }, $set: { updatedAt: now } },
+    { upsert: true },
+  );
+}
 
 function profileForSession(session: GoogleSession): CreatorCardData {
   return { ...creatorCard, name: session.name, avatarUrl: session.picture };
@@ -278,6 +339,7 @@ export async function reviewBrandCollaboration(session: GoogleSession, collabora
       { $set: { "creatorApplications.$.status": creatorStatus, "creatorApplications.$.nextAction": nextAction, updatedAt: new Date() } },
     ),
   ]);
+  if (accepted) await createCollaborationMessageThread(db, userId, session.name, collaboration);
 }
 
 export async function addBrandBudget(session: GoogleSession, amount: number) {

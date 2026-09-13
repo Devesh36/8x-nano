@@ -17,6 +17,7 @@
 * { box-sizing: border-box; }
 
 html { min-width: 320px; background: var(--canvas); }
+html, body { overflow-x: hidden; }
 
 body {
   margin: 0;
@@ -28,6 +29,7 @@ body {
 
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(45,93,242,.35); outline-offset: 2px; }
 
 .app-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
 .app-scrollbar::-webkit-scrollbar-thumb { background: #d7dfeb; border-radius: 999px; }
@@ -54,6 +56,11 @@ button { cursor: pointer; }
 .brand-mark svg { display: block; }
 
 .focus-ring { box-shadow: 0 0 0 3px rgba(45,93,242,.85); }
+
+@media (max-width: 640px) {
+  h1 { text-wrap: balance; }
+  .sky-panel { border-radius: 18px; }
+}
 
 @media (max-width: 760px) {
   .desktop-only { display: none !important; }

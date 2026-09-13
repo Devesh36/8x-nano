@@ -39,6 +39,6 @@ export const industries = [
 ];
 
 export const opportunities = [
-  { name: "Premium Inboxes", match: "100% match", region: "Europe · North America", deadline: "6 days", logo: "PI" },
-  { name: "OrbiSearch", match: "100% match", region: "Europe · North America", deadline: "6 days", logo: "o" },
+  { name: "Premium Inboxes", match: "100% match", region: "Europe · North America", deadline: "6 days", logo: "PI", industry: "Productivity" },
+  { name: "OrbiSearch", match: "100% match", region: "Europe · North America", deadline: "6 days", logo: "o", industry: "Software" },
 ];

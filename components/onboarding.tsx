@@ -58,7 +58,6 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
       <div className="w-full max-w-[452px]">
         <div className="mb-8 flex items-center justify-between"><span className="brand-mark text-[20px]"><BrandSymbol /></span><span className="flex items-center gap-2 text-sm text-[var(--ink)]"><Globe2 size={15} className="text-[var(--muted)]" /> EN</span></div>
         {step !== "role" && step !== "preview" && <button onClick={previous} className="mb-4 inline-flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--ink)]"><ArrowLeft size={15} /> {step === "profile" ? "Back to my account" : "Back"}</button>}
-        {step !== "role" && step !== "professional" && step !== "preview" && <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP {stepIndex} OF 4</p>}
         {step === "role" && <RoleStep selected={selectedRole} onSelect={setSelectedRole} onContinue={next} onDemo={() => window.location.assign("/demo")} onSignIn={() => window.location.assign("/signin")} />}
         {step === "signup" && <SignupStep onContinue={next} onSignIn={() => window.location.assign("/signin")} />}
         {step === "profile" && <ProfileStep value={profileUrl} onChange={updateProfileUrl} onUseDemo={() => updateProfileUrl("https://www.linkedin.com/in/demo-creator")} onOpenDemo={() => window.location.assign("/demo")} imported={importedProfile} error={profileError} onImport={importProfile} onContinue={next} />}

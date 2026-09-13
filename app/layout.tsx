@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Naano — Creator marketplace",
-  description: "A polished local rebuild of the Naano creator workspace.",
+  title: "Naano — The B2B LinkedIn Creator Marketplace",
+  description: "Find the creators your buyers trust, launch focused campaigns, and keep every collaboration connected.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

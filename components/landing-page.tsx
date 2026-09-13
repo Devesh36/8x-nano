@@ -1,46 +1,94 @@
 import Link from "next/link";
-import { ArrowRight, Check, CirclePlay, Handshake, Layers3, MessageCircle, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Globe2, Linkedin, Play, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
 import { BrandSymbol } from "@/components/creator-card";
-import { PrimaryButton, SecondaryButton, StatusPill } from "@/components/ui";
 
-const benefits = [
-  "Creator cards built for B2B buyers",
-  "Campaigns that become real opportunities",
-  "One shared place for applications and messages",
-];
+const navItems = [
+  ["For companies", "#companies"],
+  ["For creators", "#creators"],
+  ["For agencies", "#agencies"],
+  ["How it works", "#how-it-works"],
+] as const;
+
+const logos = ["a Growth Machine", "gojiberry", "ChatSEO", "Abyssale", "BlogSEO", "lemlist", "folk"];
 
 export function LandingPage() {
-  return <main className="min-h-screen overflow-hidden bg-[#f7f9fc] text-[var(--ink)]">
-    <header className="mx-auto flex h-20 max-w-[1180px] items-center justify-between px-5 sm:px-8">
-      <Link href="/" className="brand-mark text-xl"><BrandSymbol /> naano</Link>
-      <nav className="hidden items-center gap-7 text-sm font-semibold text-[var(--muted)] md:flex"><a href="#how-it-works">How it works</a><a href="#for-you">For creators</a><a href="#for-you">For brands</a></nav>
-      <div className="flex items-center gap-2"><Link href="/signin" className="hidden px-3 py-2 text-sm font-semibold text-[var(--ink)] sm:block">Sign in</Link><Link href="/onboarding"><PrimaryButton className="min-h-9 px-4 text-xs">Get started <ArrowRight size={14} /></PrimaryButton></Link></div>
-    </header>
+  return (
+    <main className="overflow-hidden bg-[#f8fafc] text-[#17191f]">
+      <header className="sticky top-0 z-30 border-b border-black/[.035] bg-white/92 backdrop-blur-md">
+        <div className="mx-auto flex h-[86px] max-w-[1920px] items-center justify-between px-6 sm:px-10 lg:px-14">
+          <Link href="/" aria-label="Naano home" className="brand-mark text-[30px] font-extrabold text-[#0d1118] sm:text-[32px]"><BrandSymbol /> naano</Link>
+          <nav aria-label="Primary" className="hidden items-center gap-9 text-[17px] font-medium tracking-[-.025em] lg:flex">
+            {navItems.map(([label, href]) => <a key={label} href={href} className="hover:text-[#315ef5]">{label}</a>)}
+            <a href="#agencies" className="inline-flex items-center gap-1 hover:text-[#315ef5]">Resources <ChevronDown size={14} strokeWidth={2.4} /></a>
+          </nav>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button type="button" aria-label="Language" className="hidden items-center gap-2 px-2 py-2 text-sm font-semibold sm:inline-flex"><Globe2 size={17} strokeWidth={1.8} /> EN</button>
+            <Link href="/signin" className="rounded-full border border-[#e9e5df] bg-white px-4 py-2.5 text-sm font-semibold shadow-[0_2px_8px_rgba(19,29,53,.03)] transition hover:border-[#ccd5e8] hover:bg-[#f8faff] sm:px-5 sm:text-base">Sign in</Link>
+            <Link href="/onboarding" className="rounded-full bg-[#171a20] px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-px hover:bg-[#315ef5] sm:px-5 sm:text-base">Sign up</Link>
+          </div>
+        </div>
+      </header>
 
-    <section className="relative mx-auto grid max-w-[1180px] gap-12 px-5 pb-20 pt-12 sm:px-8 md:grid-cols-[1.05fr_.95fr] md:items-center md:pt-20 lg:pb-28">
-      <div className="absolute -left-48 top-0 -z-0 h-[480px] w-[480px] rounded-full bg-[#dce7ff]/70 blur-3xl" />
-      <div className="relative z-10"><StatusPill>Built for B2B creator marketing</StatusPill><h1 className="mt-6 max-w-[680px] text-4xl font-bold leading-[.98] tracking-[-.07em] sm:text-5xl lg:text-6xl">The creator marketplace for work that deserves trust.</h1><p className="mt-6 max-w-[570px] text-base leading-7 text-[var(--muted)] sm:text-lg">Naano brings brands and credible LinkedIn creators together—from a clear brief and application to an active collaboration.</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link href="/onboarding?role=brand"><PrimaryButton className="w-full sm:w-auto">I&apos;m a brand <ArrowRight size={16} /></PrimaryButton></Link><Link href="/onboarding?role=creator"><SecondaryButton className="w-full sm:w-auto">I&apos;m a creator</SecondaryButton></Link></div><div className="mt-8 space-y-3">{benefits.map((benefit) => <p key={benefit} className="flex items-center gap-3 text-sm font-medium"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#e8f8ef] text-[#159358]"><Check size={12} /></span>{benefit}</p>)}</div></div>
-      <div className="relative z-10 mx-auto w-full max-w-[500px]"><div className="absolute -right-10 top-8 h-40 w-40 rounded-full bg-[#b9d4ff]/70 blur-3xl" /><div className="relative overflow-hidden rounded-[28px] border border-[#d7e2f4] bg-white p-4 shadow-[0_30px_70px_rgba(42,69,129,.15)] sm:p-5"><div className="sky-panel rounded-2xl p-5"><div className="flex items-center justify-between"><span className="brand-mark text-base"><BrandSymbol /> naano</span><span className="rounded-full bg-white px-3 py-1 text-[10px] font-semibold text-[#159358] shadow-sm">● Campaign live</span></div><p className="mt-10 text-[10px] font-semibold uppercase tracking-[.16em] text-[#4c7199]">Creator opportunity</p><h2 className="mt-2 max-w-[290px] text-2xl font-bold leading-tight tracking-[-.05em]">Bring trusted DevOps stories to the people who build.</h2><p className="mt-3 text-sm leading-6 text-[var(--muted)]">A campaign brief matched to proven B2B voices.</p></div><div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]"><div className="rounded-2xl border border-[var(--line)] p-4"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-[#43588f] to-[#b6968a] text-xs font-bold text-white">DR</span><span><b className="block text-sm">Devesh Rathod</b><span className="text-xs text-[var(--muted)]">AI · Productivity · Software</span></span></div><div className="mt-4 flex items-center justify-between border-t border-[var(--line)] pt-3 text-xs"><span className="text-[var(--muted)]">Starting at</span><b className="text-base">€300 / post</b></div></div><div className="flex items-center justify-center rounded-2xl bg-[#edf2ff] p-4 text-center text-[var(--blue)]"><span><Handshake className="mx-auto" size={23} /><b className="mt-2 block text-xs">A clearer way<br />to collaborate</b></span></div></div></div></div>
-    </section>
+      <section className="relative isolate flex min-h-[calc(100svh-86px)] items-center overflow-hidden bg-[#d9f3ff] px-5 py-20 sm:px-8 lg:px-12">
+        <div className="absolute inset-0 -z-20 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/naano-cloud-hero.png')" }} />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_35%,rgba(237,251,255,.25),rgba(239,250,255,.06)_37%,rgba(222,247,255,.2)_100%)]" />
+        <div className="relative mx-auto flex w-full max-w-[1210px] flex-col items-center text-center">
+          <div className="inline-flex items-center gap-3 rounded-full bg-white/90 px-4 py-2 text-sm font-medium tracking-[-.01em] text-[#363a42] shadow-[0_10px_30px_rgba(69,123,163,.12)] sm:text-base">
+            <span className="text-[18px] leading-none">𝕏</span><span className="h-5 w-px bg-[#dfe4e9]" /><Linkedin size={20} fill="#1769aa" className="text-[#1769aa]" />
+            <span>Where B2B brands work with creators</span>
+          </div>
+          <h1 className="mt-12 max-w-[980px] text-[48px] font-semibold leading-[.94] tracking-[-.075em] text-[#17191f] sm:text-[72px] md:text-[92px] lg:text-[104px]">The B2B LinkedIn<br className="hidden sm:block" /> Creator Marketplace.</h1>
+          <p className="mt-9 max-w-[770px] text-[19px] leading-[1.42] tracking-[-.025em] text-[#454b55] sm:text-[24px] lg:text-[27px]">Find the creators your buyers already trust, launch campaigns in days, and track the clicks, leads and pipeline generated by every post.</p>
+          <div className="mt-11 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-8">
+            <Link href="/onboarding?role=brand" className="inline-flex items-center gap-3 rounded-xl bg-[#1b1d22] px-7 py-4 text-[17px] font-semibold text-white shadow-[0_12px_24px_rgba(22,29,43,.2)] transition hover:-translate-y-0.5 hover:bg-[#315ef5]">Launch a campaign <ArrowRight size={20} /></Link>
+            <a href="#how-it-works" className="inline-flex items-center gap-3 px-4 py-3 text-[17px] font-semibold transition hover:text-[#315ef5]">See how Naano works <ArrowRight size={20} /></a>
+          </div>
+          <p className="mt-10 inline-flex items-center gap-3 text-[15px] font-medium text-[#5d636d]"><ShieldCheck size={21} strokeWidth={1.6} /> Trusted by modern B2B teams</p>
+        </div>
+        <div aria-label="Trusted company logos" className="absolute inset-x-0 bottom-9 flex items-center justify-around gap-6 overflow-hidden px-5 text-center text-[15px] font-bold tracking-[-.04em] text-[#585d65]/70 sm:bottom-12 sm:text-[21px] lg:text-[24px]">
+          {logos.map((logo, index) => <span key={logo} className={`${index > 4 ? "hidden lg:inline" : index > 3 ? "hidden md:inline" : ""} whitespace-nowrap`}>{logo}</span>)}
+        </div>
+      </section>
 
-    <section className="border-y border-[#e1e7f0] bg-white/70"><div className="mx-auto grid max-w-[1180px] gap-6 px-5 py-6 sm:grid-cols-3 sm:px-8"><TrustItem value="One workspace" label="for briefs, applications, and messages" /><TrustItem value="Creator-led" label="built around credible professional voices" /><TrustItem value="Clear terms" label="before a collaboration begins" /></div></section>
+      <section id="companies" className="bg-[#fcfcfb] px-5 py-24 sm:px-8 sm:py-32">
+        <div className="mx-auto max-w-[1100px] text-center">
+          <p className="text-xs font-bold uppercase tracking-[.22em] text-[#315ef5]">The marketplace advantage</p>
+          <h2 className="mx-auto mt-5 max-w-[850px] text-4xl font-semibold leading-[1.02] tracking-[-.065em] sm:text-6xl">One place to find trusted B2B voices and turn them into measurable momentum.</h2>
+          <div className="mt-14 grid gap-4 text-left md:grid-cols-3">
+            <Benefit icon={UsersRound} title="Find the credible voices" text="Discover creators who already reach the people your business needs to influence." />
+            <Benefit icon={Sparkles} title="Launch with clarity" text="Create a focused brief, compare creator cards, and agree on the terms before work starts." />
+            <Benefit icon={Check} title="See the outcome" text="Keep applications, campaign activity, and collaboration messages connected in one workspace." />
+          </div>
+        </div>
+      </section>
 
-    <section id="for-you" className="border-y border-[#e1e7f0] bg-white"><div className="mx-auto grid max-w-[1180px] gap-5 px-5 py-16 sm:px-8 md:grid-cols-2"><RoleCard icon={Sparkles} eyebrow="For creators" title="Make your expertise easy to choose." text="Build a useful card, discover campaigns that fit, apply on your terms, and keep every collaboration in one workspace." cta="Build my creator card" href="/onboarding?role=creator" /><RoleCard icon={Layers3} eyebrow="For brands" title="Find the voices your buyers already trust." text="Create a focused brief, meet relevant creators, review applications, and keep your campaign decisions connected." cta="Launch a campaign" href="/onboarding?role=brand" dark /></div></section>
+      <section id="how-it-works" className="border-y border-[#ebe9e5] bg-[#f7f7f5] px-5 py-24 sm:px-8 sm:py-32">
+        <div className="mx-auto grid max-w-[1180px] gap-12 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
+          <div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#315ef5]">How it works</p><h2 className="mt-5 text-4xl font-semibold leading-[1.02] tracking-[-.065em] sm:text-6xl">B2B influence, without the spreadsheet chaos.</h2><p className="mt-7 max-w-[480px] text-lg leading-8 text-[#686f7b]">Naano gives brands and creators a shared path from an initial brief to a live collaboration.</p><Link href="/onboarding?role=creator" className="mt-8 inline-flex items-center gap-3 font-semibold text-[#315ef5]">Build your creator card <ArrowRight size={18} /></Link></div>
+          <ol className="grid gap-3"><WorkflowStep number="01" title="Create your profile or brief" text="Give the marketplace the context it needs to make useful matches." /><WorkflowStep number="02" title="Choose the right fit" text="Creators can apply to opportunities; brands can review real creator cards." /><WorkflowStep number="03" title="Move the work forward" text="Accepted applications open a shared collaboration and message thread." /></ol>
+        </div>
+      </section>
 
-    <section id="how-it-works" className="mx-auto max-w-[1180px] px-5 py-20 sm:px-8"><div className="max-w-[620px]"><StatusPill tone="gray">One calm workflow</StatusPill><h2 className="mt-5 text-3xl font-bold tracking-[-.06em] sm:text-4xl">From the right brief to the right collaboration.</h2></div><div className="mt-10 grid gap-5 md:grid-cols-3"><Step number="01" icon={Users} title="Set up your side" text="Create a creator card or give your brand the context it needs for better matches." /><Step number="02" icon={Layers3} title="Find the fit" text="Brands publish opportunities; creators browse, ask questions, and apply." /><Step number="03" icon={MessageCircle} title="Work in one thread" text="Accepted applications open a shared conversation for campaign details and delivery." /></div></section>
+      <section id="agencies" className="bg-[#fdfdfc] px-5 py-28 sm:px-8 sm:py-36">
+        <div className="mx-auto max-w-[1120px] text-center">
+          <p className="text-xs font-bold uppercase tracking-[.22em] text-[#315ef5]">Built for people who run influence</p>
+          <blockquote className="mt-12 text-4xl font-medium leading-[1.12] tracking-[-.06em] text-[#202124] sm:text-5xl lg:text-[62px]">“We manage €10M+ of influence budget every year. For B2B, Naano simply makes our <span className="bg-gradient-to-r from-[#a6b4cb] to-[#c9d6ff] bg-clip-text text-transparent">life easier</span>.”</blockquote>
+          <div className="mx-auto mt-12 grid h-28 w-28 place-items-center rounded-full bg-[radial-gradient(circle_at_40%_30%,#eed0af_0_12%,#3f5167_13%_34%,#1d2430_35%)] text-lg font-bold text-white shadow-[0_12px_25px_rgba(22,29,43,.16)]">DZ</div>
+          <p className="mt-5 text-xl font-semibold tracking-[-.04em]">David Zmirov</p><p className="mt-1 text-lg text-[#6d737d]">CEO, Zmirov Communication</p><p className="mt-1 text-base text-[#a3a8b0]">Influence agency</p>
+        </div>
+      </section>
 
-    <section className="mx-5 mb-10 overflow-hidden rounded-[28px] bg-[#172b68] text-white sm:mx-8"><div className="mx-auto flex max-w-[1180px] flex-col gap-8 px-6 py-12 sm:px-10 md:flex-row md:items-center md:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-[#a9c4ff]">Ready when you are</p><h2 className="mt-3 max-w-[600px] text-3xl font-bold tracking-[-.06em] sm:text-4xl">Start with a real workspace, not another pitch deck.</h2></div><div className="flex flex-col gap-3 sm:flex-row"><Link href="/demo"><SecondaryButton className="w-full border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"><CirclePlay size={16} /> View demo</SecondaryButton></Link><Link href="/onboarding"><PrimaryButton className="w-full bg-white text-[#17306f] hover:bg-[#edf2ff] sm:w-auto">Create an account <ArrowRight size={16} /></PrimaryButton></Link></div></div></section>
-  </main>;
+      <section id="creators" className="bg-[#171a20] px-5 py-20 text-white sm:px-8 sm:py-24">
+        <div className="mx-auto flex max-w-[1180px] flex-col items-start justify-between gap-9 md:flex-row md:items-end"><div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#9ebaff]">For LinkedIn creators</p><h2 className="mt-5 max-w-[720px] text-4xl font-semibold leading-[1.02] tracking-[-.065em] sm:text-6xl">Build a creator card brands can confidently choose.</h2></div><div className="flex flex-col gap-3 sm:flex-row"><Link href="/demo" className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 px-6 py-3.5 font-semibold transition hover:bg-white/10"><Play size={17} /> View demo</Link><Link href="/onboarding?role=creator" className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 font-semibold text-[#171a20] transition hover:bg-[#dce8ff]">Join as a creator <ArrowRight size={17} /></Link></div></div>
+      </section>
+    </main>
+  );
 }
 
-function RoleCard({ icon: Icon, eyebrow, title, text, cta, href, dark = false }: { icon: typeof Sparkles; eyebrow: string; title: string; text: string; cta: string; href: string; dark?: boolean }) {
-  return <article className={`rounded-3xl p-6 sm:p-8 ${dark ? "bg-[#1b387d] text-white" : "border border-[var(--line)] bg-[#f8faff]"}`}><span className={`grid h-11 w-11 place-items-center rounded-2xl ${dark ? "bg-white/15 text-white" : "bg-[#e7efff] text-[var(--blue)]"}`}><Icon size={21} /></span><p className={`mt-7 text-xs font-semibold uppercase tracking-[.16em] ${dark ? "text-[#a9c4ff]" : "text-[var(--blue)]"}`}>{eyebrow}</p><h3 className="mt-3 text-2xl font-bold tracking-[-.05em]">{title}</h3><p className={`mt-4 max-w-[460px] text-sm leading-6 ${dark ? "text-[#d6e0ff]" : "text-[var(--muted)]"}`}>{text}</p><Link href={href} className={`mt-7 inline-flex items-center gap-2 text-sm font-semibold ${dark ? "text-white" : "text-[var(--blue)]"}`}>{cta} <ArrowRight size={15} /></Link></article>;
+function Benefit({ icon: Icon, title, text }: { icon: typeof UsersRound; title: string; text: string }) {
+  return <article className="rounded-2xl border border-[#e7e5e1] bg-white p-7 shadow-[0_12px_28px_rgba(28,34,46,.045)]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#eef3ff] text-[#315ef5]"><Icon size={20} /></span><h3 className="mt-8 text-xl font-semibold tracking-[-.04em]">{title}</h3><p className="mt-3 text-[15px] leading-6 text-[#6e7580]">{text}</p></article>;
 }
 
-function Step({ number, icon: Icon, title, text }: { number: string; icon: typeof Users; title: string; text: string }) {
-  return <article className="rounded-2xl border border-[var(--line)] bg-white p-6"><div className="flex items-center justify-between"><span className="text-xs font-bold tracking-[.14em] text-[var(--blue)]">{number}</span><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#eef3ff] text-[var(--blue)]"><Icon size={18} /></span></div><h3 className="mt-8 text-xl font-semibold">{title}</h3><p className="mt-3 text-sm leading-6 text-[var(--muted)]">{text}</p></article>;
-}
-
-function TrustItem({ value, label }: { value: string; label: string }) {
-  return <div className="border-l-2 border-[#d6e2ff] pl-4"><p className="text-sm font-bold tracking-[-.02em]">{value}</p><p className="mt-1 text-xs leading-5 text-[var(--muted)]">{label}</p></div>;
+function WorkflowStep({ number, title, text }: { number: string; title: string; text: string }) {
+  return <li className="flex gap-5 rounded-2xl border border-[#e6e7e9] bg-white p-6 sm:p-7"><span className="text-sm font-bold tracking-[.16em] text-[#315ef5]">{number}</span><span><h3 className="text-xl font-semibold tracking-[-.04em]">{title}</h3><p className="mt-2 text-[15px] leading-6 text-[#6e7580]">{text}</p></span></li>;
 }

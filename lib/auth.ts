@@ -15,12 +15,27 @@ const sessionSecret = () => process.env.AUTH_SESSION_SECRET || process.env.GOOGL
 
 const encode = (value: string | Buffer) => Buffer.from(value).toString("base64url");
 
+function withoutTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+/**
+ * OAuth providers require a byte-for-byte match for the callback URL.  A
+ * deployment can set NAANO_APP_URL to keep that URL stable when Vercel adds
+ * preview aliases or the app is served behind a proxy.  Locally (and when the
+ * value is absent) the incoming request origin remains the source of truth.
+ */
+function callbackOrigin(requestOrigin: string) {
+  const configuredOrigin = process.env.NAANO_APP_URL?.trim();
+  return withoutTrailingSlash(configuredOrigin || requestOrigin);
+}
+
 export function googleRedirectUri(origin: string) {
-  return process.env.NAANO_GOOGLE_REDIRECT_URI || `${origin}/api/auth/google/callback`;
+  return process.env.NAANO_GOOGLE_REDIRECT_URI || `${callbackOrigin(origin)}/api/auth/google/callback`;
 }
 
 export function linkedinRedirectUri(origin: string) {
-  return process.env.NAANO_LINKEDIN_REDIRECT_URI || `${origin}/api/auth/linkedin/callback`;
+  return process.env.NAANO_LINKEDIN_REDIRECT_URI || `${callbackOrigin(origin)}/api/auth/linkedin/callback`;
 }
 
 export function signSession(session: GoogleSession) {

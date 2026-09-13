@@ -59,14 +59,41 @@ Local development uses `.next-dev`, while production builds use Next.js’s stan
 
 See `.env.example` for the complete list. Do not commit `.env` files or OAuth/MongoDB secrets.
 
-For OAuth, register these callback URLs with the relevant provider:
+For local OAuth, register these callback URLs with the relevant provider:
 
 ```text
 http://localhost:3000/api/auth/google/callback
 http://localhost:3000/api/auth/linkedin/callback
 ```
 
-Use the exact deployed HTTPS callbacks when running outside localhost.
+### Vercel OAuth setup
+
+OAuth providers compare redirect URLs exactly. Before signing in from a Vercel
+deployment, add this Production environment variable in **Vercel → Project →
+Settings → Environment Variables**:
+
+```text
+NAANO_APP_URL=https://your-project.vercel.app
+```
+
+Then open **Google Cloud Console → APIs & Services → Credentials → your OAuth
+2.0 Client ID** and add this exact value under **Authorized redirect URIs**:
+
+```text
+https://your-project.vercel.app/api/auth/google/callback
+```
+
+Use the same domain in both places (custom domain or `vercel.app` domain), with
+`https`, no trailing slash, and the full `/api/auth/google/callback` path. If
+`NAANO_GOOGLE_REDIRECT_URI` exists in Vercel, remove it or change it to that
+same value—leaving it set to `http://localhost:3000/...` causes Google’s
+`redirect_uri_mismatch` page. Redeploy after changing Vercel environment
+variables. Register the corresponding deployed LinkedIn callback as well when
+LinkedIn sign-in is enabled:
+
+```text
+https://your-project.vercel.app/api/auth/linkedin/callback
+```
 
 ## Demo limitations
 

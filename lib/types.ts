@@ -78,6 +78,32 @@ export type BrandCreator = {
   avatarUrl?: string;
 };
 
+export type BrandProfile = {
+  companyName: string;
+  companyWebsite?: string;
+  jobTitle: string;
+  industry: string;
+  companySize: string;
+  country: string;
+  onboardingComplete: boolean;
+};
+
+export type BrandCollaboration = {
+  id: string;
+  creatorName: string;
+  creatorEmail: string;
+  creatorPicture?: string;
+  creatorUserId: string;
+  creatorApplicationId: string;
+  campaignId: string;
+  campaignName: string;
+  status: "Application received" | "Active" | "Declined" | "Completed";
+  nextAction: string;
+  amount: number;
+  deadline: string;
+  updatedAt: string;
+};
+
 export type BrandCampaign = {
   id: string;
   name: string;
@@ -87,4 +113,8 @@ export type BrandCampaign = {
   published: number;
   budget: number;
   created: string;
+  industry?: string;
+  region?: string;
+  compensation?: number;
+  deadline?: string;
 };

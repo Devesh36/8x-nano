@@ -1,4 +1,4 @@
-import type { BrandCampaign, BrandCreator, CreatorCardData, CreatorCollaboration, CreatorOpportunity } from "@/lib/types";
+import type { BrandCampaign, BrandCollaboration, BrandCreator, BrandProfile, CreatorCardData, CreatorCollaboration, CreatorOpportunity } from "@/lib/types";
 import { creatorCard, opportunities as demoOpportunities } from "@/lib/data";
 import { getDatabase, isMongoConfigured } from "@/lib/db";
 import type { GoogleSession } from "@/lib/auth";
@@ -29,7 +29,9 @@ type DbWorkspace = {
     walletBalance: number;
     metrics: { creatorsActivated: number; postsPublished: number; profilesEngaged: number; impressions: number };
     campaigns: BrandCampaign[];
+    collaborations: BrandCollaboration[];
     todoState: string[];
+    profile?: BrandProfile;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -37,7 +39,7 @@ type DbWorkspace = {
 
 type BrandWorkspaceData = NonNullable<DbWorkspace["brand"]>;
 
-type DbOpportunity = CreatorOpportunity & { _id: string; createdAt: Date; updatedAt: Date };
+type DbOpportunity = CreatorOpportunity & { _id: string; createdAt: Date; updatedAt: Date; brandWorkspaceId?: string };
 
 export type WorkspaceSnapshot = {
   persisted: true;
@@ -49,6 +51,8 @@ export type WorkspaceSnapshot = {
     metrics: BrandWorkspaceData["metrics"];
     campaigns: BrandCampaign[];
     creators: BrandCreator[];
+    collaborations: BrandCollaboration[];
+    profile?: BrandProfile;
   };
 };
 
@@ -68,13 +72,24 @@ function collaborationForOpportunity(opportunity: CreatorOpportunity): CreatorCo
   };
 }
 
-export async function getCreatorOpportunities() {
-  if (!isMongoConfigured()) return demoOpportunities;
+async function seedDemoOpportunities() {
   const db = await getDatabase();
   const collection = db.collection<DbOpportunity>("opportunities");
   const now = new Date();
   await Promise.all(demoOpportunities.map((opportunity) => collection.updateOne({ _id: opportunity.id }, { $set: { ...opportunity, updatedAt: now }, $setOnInsert: { createdAt: now } }, { upsert: true })));
-  return collection.find({}).sort({ createdAt: 1 }).toArray();
+  return collection;
+}
+
+function toPublicOpportunity(opportunity: DbOpportunity): CreatorOpportunity {
+  const { _id: _ignoredId, createdAt: _ignoredCreatedAt, updatedAt: _ignoredUpdatedAt, brandWorkspaceId: _ignoredBrandWorkspaceId, ...publicOpportunity } = opportunity;
+  return publicOpportunity;
+}
+
+export async function getCreatorOpportunities() {
+  if (!isMongoConfigured()) return demoOpportunities;
+  const collection = await seedDemoOpportunities();
+  const opportunities = await collection.find({}).sort({ createdAt: 1 }).toArray();
+  return opportunities.map(toPublicOpportunity);
 }
 
 export async function getCreatorCollaborations(session: GoogleSession) {
@@ -84,8 +99,8 @@ export async function getCreatorCollaborations(session: GoogleSession) {
 }
 
 export async function applyToCreatorOpportunity(session: GoogleSession, opportunityId: string) {
-  const available = await getCreatorOpportunities();
-  const opportunity = available.find((item) => item.id === opportunityId);
+  const collection = await seedDemoOpportunities();
+  const opportunity = await collection.findOne({ _id: opportunityId });
   if (!opportunity) throw new Error("Opportunity not found");
   const { db, userId } = await ensureAccount({ ...session, role: "creator" });
   const collaboration = collaborationForOpportunity(opportunity);
@@ -94,7 +109,35 @@ export async function applyToCreatorOpportunity(session: GoogleSession, opportun
     { $push: { creatorApplications: collaboration }, $set: { updatedAt: new Date() } },
   );
   const workspace = await db.collection<DbWorkspace>("workspaces").findOne({ _id: workspaceId(userId, "creator") }, { projection: { creatorApplications: 1 } });
-  return workspace?.creatorApplications?.find((item) => item.opportunityId === opportunityId) || collaboration;
+  const saved = workspace?.creatorApplications?.find((item) => item.opportunityId === opportunityId) || collaboration;
+  if (opportunity.brandWorkspaceId) {
+    const brandCollaboration: BrandCollaboration = {
+      id: `brand-application-${opportunity.id}-${userId}`,
+      creatorName: session.name,
+      creatorEmail: session.email,
+      creatorPicture: session.picture,
+      creatorUserId: userId,
+      creatorApplicationId: saved.id,
+      campaignId: opportunity.id,
+      campaignName: opportunity.name,
+      status: "Application received",
+      nextAction: "Review the creator application",
+      amount: opportunity.compensation,
+      deadline: opportunity.deadline,
+      updatedAt: saved.appliedAt,
+    };
+    const brandResult = await db.collection<DbWorkspace>("workspaces").updateOne(
+      { _id: opportunity.brandWorkspaceId, "brand.collaborations.id": { $ne: brandCollaboration.id } },
+      { $push: { "brand.collaborations": brandCollaboration }, $set: { updatedAt: new Date() } },
+    );
+    if (brandResult.modifiedCount) {
+      await db.collection<DbWorkspace>("workspaces").updateOne(
+        { _id: opportunity.brandWorkspaceId, "brand.campaigns.id": opportunity.id },
+        { $inc: { "brand.campaigns.$.creators": 1, "brand.metrics.creatorsActivated": 1 } },
+      );
+    }
+  }
+  return saved;
 }
 
 const workspaceId = (userId: string, role: WorkspaceRole) => `${userId}:${role}`;
@@ -122,7 +165,7 @@ export async function ensureAccount(session: GoogleSession) {
 
   const workspaces = db.collection<DbWorkspace>("workspaces");
   const insertFields: Partial<DbWorkspace> = session.role === "brand"
-    ? { brand: { walletBalance: 0, metrics: { creatorsActivated: 0, postsPublished: 0, profilesEngaged: 0, impressions: 0 }, campaigns: [], todoState: [] } }
+    ? { brand: { walletBalance: 0, metrics: { creatorsActivated: 0, postsPublished: 0, profilesEngaged: 0, impressions: 0 }, campaigns: [], collaborations: [], todoState: [] } }
     : { creatorProfile: profileForSession(session) };
   await workspaces.updateOne(
     { _id: workspaceId(userId, session.role) },
@@ -146,6 +189,22 @@ export async function hasCompletedCreatorWorkspace(session: GoogleSession) {
   return Boolean(workspace?.onboardingComplete || workspace?.linkedinUrl);
 }
 
+export async function hasCompletedBrandWorkspace(session: GoogleSession) {
+  const db = await getDatabase();
+  const workspace = await db.collection<DbWorkspace>("workspaces").findOne({ _id: workspaceId(`google:${session.sub}`, "brand") }, { projection: { "brand.profile.onboardingComplete": 1 } });
+  return Boolean(workspace?.brand?.profile?.onboardingComplete);
+}
+
+export async function saveBrandOnboarding(session: GoogleSession, profile: Omit<BrandProfile, "onboardingComplete">) {
+  const { db, userId } = await ensureAccount({ ...session, role: "brand" });
+  const savedProfile: BrandProfile = { ...profile, onboardingComplete: true };
+  await db.collection<DbWorkspace>("workspaces").updateOne(
+    { _id: workspaceId(userId, "brand") },
+    { $set: { "brand.profile": savedProfile, updatedAt: new Date() } },
+  );
+  return savedProfile;
+}
+
 export async function getWorkspaceSnapshot(session: GoogleSession, role: WorkspaceRole): Promise<WorkspaceSnapshot> {
   const { db, userId } = await ensureAccount({ ...session, role });
   const user = await db.collection<DbUser>("users").findOne({ _id: userId });
@@ -164,20 +223,61 @@ export async function getWorkspaceSnapshot(session: GoogleSession, role: Workspa
     metrics: workspace.brand?.metrics || { creatorsActivated: 0, postsPublished: 0, profilesEngaged: 0, impressions: 0 },
     campaigns: workspace.brand?.campaigns || [],
     creators: creatorWorkspaces.flatMap((item) => item.creatorProfile ? [creatorToBrandCreator(item.creatorProfile)] : []),
+    collaborations: workspace.brand?.collaborations || [],
+    profile: workspace.brand?.profile,
   };
   return result;
 }
 
-export async function createBrandCampaign(session: GoogleSession, input: Pick<BrandCampaign, "name" | "description">) {
+export async function createBrandCampaign(session: GoogleSession, input: Pick<BrandCampaign, "name" | "description" | "industry" | "region" | "compensation" | "deadline">) {
   const { db, userId } = await ensureAccount({ ...session, role: "brand" });
-  const campaign: BrandCampaign = { id: `campaign-${Date.now()}`, name: input.name, description: input.description, status: "Draft", creators: 0, published: 0, budget: 0, created: new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date()) };
-  await db.collection<DbWorkspace>("workspaces").updateOne({ _id: workspaceId(userId, "brand") }, { $push: { "brand.campaigns": campaign }, $set: { updatedAt: new Date() } });
+  const brandWorkspaceId = workspaceId(userId, "brand");
+  const workspace = await db.collection<DbWorkspace>("workspaces").findOne({ _id: brandWorkspaceId }, { projection: { "brand.profile.companyName": 1 } });
+  const industry = input.industry || "Software";
+  const region = input.region || "Europe · North America";
+  const compensation = input.compensation || 500;
+  const deadline = input.deadline || "14 days";
+  const campaign: BrandCampaign = { id: `campaign-${Date.now()}`, name: input.name, description: input.description, status: "Active", creators: 0, published: 0, budget: 0, created: new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date()), industry, region, compensation, deadline };
+  const brandName = workspace?.brand?.profile?.companyName || session.name;
+  const logo = brandName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "B";
+  const opportunity: DbOpportunity = { _id: campaign.id, id: campaign.id, name: campaign.name, brandName, description: campaign.description, match: "Strong match", region, deadline, logo, industry, compensation, channel: "LinkedIn", brandWorkspaceId, createdAt: new Date(), updatedAt: new Date() };
+  const { _id: _opportunityId, ...opportunityFields } = opportunity;
+  await Promise.all([
+    db.collection<DbWorkspace>("workspaces").updateOne({ _id: brandWorkspaceId }, { $push: { "brand.campaigns": campaign }, $set: { updatedAt: new Date() } }),
+    db.collection<DbOpportunity>("opportunities").updateOne({ _id: campaign.id }, { $set: opportunityFields }, { upsert: true }),
+  ]);
   return campaign;
 }
 
 export async function deleteBrandCampaign(session: GoogleSession, id: string) {
   const { db, userId } = await ensureAccount({ ...session, role: "brand" });
-  await db.collection<DbWorkspace>("workspaces").updateOne({ _id: workspaceId(userId, "brand") }, { $pull: { "brand.campaigns": { id } }, $set: { updatedAt: new Date() } });
+  const brandWorkspaceId = workspaceId(userId, "brand");
+  await Promise.all([
+    db.collection<DbWorkspace>("workspaces").updateOne({ _id: brandWorkspaceId }, { $pull: { "brand.campaigns": { id } }, $set: { updatedAt: new Date() } }),
+    db.collection<DbOpportunity>("opportunities").deleteOne({ _id: id, brandWorkspaceId }),
+  ]);
+}
+
+export async function reviewBrandCollaboration(session: GoogleSession, collaborationId: string, decision: "accept" | "decline") {
+  const { db, userId } = await ensureAccount({ ...session, role: "brand" });
+  const brandWorkspaceId = workspaceId(userId, "brand");
+  const workspace = await db.collection<DbWorkspace>("workspaces").findOne({ _id: brandWorkspaceId, "brand.collaborations.id": collaborationId }, { projection: { "brand.collaborations.$": 1 } });
+  const collaboration = workspace?.brand?.collaborations?.[0];
+  if (!collaboration) throw new Error("Creator application not found");
+  const accepted = decision === "accept";
+  const brandStatus: BrandCollaboration["status"] = accepted ? "Active" : "Declined";
+  const creatorStatus: CreatorCollaboration["status"] = accepted ? "Active" : "Declined";
+  const nextAction = accepted ? "Agree the content angle and due date" : "No action needed";
+  await Promise.all([
+    db.collection<DbWorkspace>("workspaces").updateOne(
+      { _id: brandWorkspaceId, "brand.collaborations.id": collaborationId },
+      { $set: { "brand.collaborations.$.status": brandStatus, "brand.collaborations.$.nextAction": nextAction, "brand.collaborations.$.updatedAt": new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date()), updatedAt: new Date() } },
+    ),
+    db.collection<DbWorkspace>("workspaces").updateOne(
+      { _id: workspaceId(collaboration.creatorUserId, "creator"), "creatorApplications.id": collaboration.creatorApplicationId },
+      { $set: { "creatorApplications.$.status": creatorStatus, "creatorApplications.$.nextAction": nextAction, updatedAt: new Date() } },
+    ),
+  ]);
 }
 
 export async function addBrandBudget(session: GoogleSession, amount: number) {

@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, Check, ChevronDown, Globe2, Mail, ShieldCheck, Sparkles } from "lucide-react";
 import { creatorCard, industries } from "@/lib/data";
 import { BrandSymbol, CreatorCard } from "@/components/creator-card";
 import { PrimaryButton, SecondaryButton } from "@/components/ui";
 import { GoogleButton } from "@/components/auth";
 
-const steps = ["role", "signup", "profile", "details", "pricing", "professional", "preview"] as const;
+const steps = ["role", "signup", "brand-profile", "profile", "details", "pricing", "professional", "preview"] as const;
 type Step = (typeof steps)[number];
 type AccountRole = "creator" | "brand";
 type ImportedProfile = {
@@ -88,7 +88,8 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
         <div className="mb-8 flex items-center justify-between"><span className="brand-mark text-[20px]"><BrandSymbol /></span><span className="flex items-center gap-2 text-sm text-[var(--ink)]"><Globe2 size={15} className="text-[var(--muted)]" /> EN</span></div>
         {step !== "role" && step !== "preview" && <button onClick={previous} className="mb-4 inline-flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--ink)]"><ArrowLeft size={15} /> {step === "profile" ? "Back to my account" : "Back"}</button>}
         {step === "role" && <RoleStep selected={selectedRole} onSelect={setSelectedRole} onContinue={next} onDemo={() => window.location.assign("/demo")} onSignIn={() => window.location.assign(selectedRole ? `/signin?role=${selectedRole}` : "/signin")} />}
-        {step === "signup" && <SignupStep role={selectedRole || "creator"} onContinue={() => selectedRole === "brand" ? window.location.assign("/brand#overview") : next()} onSignIn={() => window.location.assign("/signin")} />}
+        {step === "signup" && <SignupStep role={selectedRole || "creator"} onContinue={() => selectedRole === "brand" ? goTo("brand-profile") : next()} onSignIn={() => window.location.assign("/signin")} />}
+        {step === "brand-profile" && <BrandProfileStep onComplete={() => window.location.assign("/brand#overview")} />}
         {step === "profile" && <ProfileStep value={profileUrl} onChange={updateProfileUrl} onUseDemo={() => updateProfileUrl("https://www.linkedin.com/in/demo-creator")} onOpenDemo={() => window.location.assign("/demo")} imported={importedProfile} error={profileError} onImport={importProfile} onContinue={next} />}
         {step === "details" && <DetailsStep profile={importedProfile} country={country} setCountry={setCountry} selected={selectedIndustries} toggle={toggleIndustry} onContinue={next} />}
         {step === "pricing" && <PricingStep price={price} setPrice={setPrice} onContinue={next} />}
@@ -111,6 +112,37 @@ function RoleOption({ title, text, selected, onClick }: { title: string; text: s
 function SignupStep({ role, onContinue, onSignIn }: { role: AccountRole; onContinue: () => void; onSignIn: () => void }) {
   const isBrand = role === "brand";
   return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 1 OF 4</p><h1 className="mt-3 text-[26px] font-bold tracking-[-.04em]">Join Naano</h1><p className="mt-3 text-sm text-[var(--muted)]">{isBrand ? "Find creators, launch campaigns, and trace real pipeline back to each post." : "Get paid to create LinkedIn content for B2B brands you actually use."}</p><div className="mt-7 space-y-3">{!isBrand && <SecondaryButton onClick={onContinue} className="w-full gap-3"><span className="font-bold text-[#1769ad]">in</span> Sign up with LinkedIn</SecondaryButton>}<GoogleButton mode="signup" role={role} /><SecondaryButton onClick={onContinue} className="w-full gap-3"><Mail size={18} className="text-[var(--muted)]" /> Sign up with email</SecondaryButton></div><p className="mt-5 text-center text-xs text-[var(--muted)]">Already have an account? <button onClick={onSignIn} className="text-[var(--blue)]">Sign in here</button></p></section>;
+}
+
+function BrandProfileStep({ onComplete }: { onComplete: () => void }) {
+  const [companyName, setCompanyName] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [industry, setIndustry] = useState("Software");
+  const [companySize, setCompanySize] = useState("1–10");
+  const [country, setCountry] = useState("India");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/workspace/actions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete_brand_onboarding", companyName, companyWebsite, jobTitle, industry, companySize, country }) });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error || "We could not save your company details.");
+      onComplete();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "We could not save your company details.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 2 OF 2</p><h1 className="mt-3 text-[26px] font-bold tracking-[-.04em]">Tell us about your company</h1><p className="mt-3 text-sm leading-5 text-[var(--muted)]">This lets Naano tailor creator recommendations, campaign briefs and reporting to your team.</p><form className="mt-6 space-y-4" onSubmit={submit}><label className="block text-xs font-semibold uppercase tracking-wide text-[#5c6470]">Company name<input required value={companyName} onChange={(event) => setCompanyName(event.target.value)} placeholder="e.g. Acme Systems" className="mt-2 h-11 w-full rounded-xl border border-[var(--line-strong)] px-3 text-sm normal-case outline-none focus:border-[var(--blue)]" /></label><div className="grid gap-4 sm:grid-cols-2"><label className="block text-xs font-semibold uppercase tracking-wide text-[#5c6470]">Your role<input required value={jobTitle} onChange={(event) => setJobTitle(event.target.value)} placeholder="e.g. Growth lead" className="mt-2 h-11 w-full rounded-xl border border-[var(--line-strong)] px-3 text-sm normal-case outline-none focus:border-[var(--blue)]" /></label><label className="block text-xs font-semibold uppercase tracking-wide text-[#5c6470]">Company website<input value={companyWebsite} onChange={(event) => setCompanyWebsite(event.target.value)} placeholder="https://company.com" className="mt-2 h-11 w-full rounded-xl border border-[var(--line-strong)] px-3 text-sm normal-case outline-none focus:border-[var(--blue)]" /></label></div><div className="grid gap-4 sm:grid-cols-3"><BrandSelect label="Industry" value={industry} onChange={setIndustry} options={["Software", "AI", "SaaS", "Fintech", "Professional services", "Other"]} /><BrandSelect label="Team size" value={companySize} onChange={setCompanySize} options={["1–10", "11–50", "51–200", "201–1,000", "1,000+"]} /><BrandSelect label="Country" value={country} onChange={setCountry} options={["India", "France", "United States", "United Kingdom", "Other"]} /></div>{error && <p role="alert" className="rounded-xl border border-[#f0c9c9] bg-[#fff6f6] p-3 text-xs leading-5 text-[#9f3838]">{error}</p>}<PrimaryButton type="submit" disabled={saving} className="w-full">{saving ? "Saving company…" : "Open my brand workspace"}</PrimaryButton></form></section>;
+}
+
+function BrandSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) {
+  return <label className="block text-xs font-semibold uppercase tracking-wide text-[#5c6470]">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-[var(--line-strong)] bg-white px-3 text-sm normal-case outline-none focus:border-[var(--blue)]">{options.map((option) => <option key={option}>{option}</option>)}</select></label>;
 }
 
 function ProfileStep({ value, onChange, onUseDemo, onOpenDemo, imported, error, onImport, onContinue }: { value: string; onChange: (value: string) => void; onUseDemo: () => void; onOpenDemo: () => void; imported: ImportedProfile | null; error: string; onImport: () => void; onContinue: () => void }) {

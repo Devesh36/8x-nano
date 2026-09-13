@@ -95,6 +95,27 @@ LinkedIn sign-in is enabled:
 https://your-project.vercel.app/api/auth/linkedin/callback
 ```
 
+### MongoDB Atlas on Vercel
+
+The authenticated creator and brand workspaces are persisted in MongoDB. Add
+the following values to the **Production** environment in Vercel, then
+redeploy:
+
+```text
+MONGODB_URI=mongodb+srv://<database-user>:<url-encoded-password>@<cluster-host>/?retryWrites=true&w=majority
+MONGODB_DB_NAME=naano
+MONGODB_AUTH_SOURCE=admin
+AUTH_SESSION_SECRET=<a-long-random-secret>
+```
+
+In MongoDB Atlas, create the database user, then allow the Vercel application
+to connect under **Network Access**. Vercel serverless functions do not have a
+single fixed IP, so for this demo the Atlas access list commonly uses
+`0.0.0.0/0`; restrict it further when you have a fixed egress solution. If the
+database password contains characters such as `@`, `:`, `/`, or `#`, URL-encode
+it before putting it in `MONGODB_URI`. Do not wrap the entire Vercel value in
+quotes.
+
 ## Demo limitations
 
 - LinkedIn follower/post analytics use a demo-safe profile snapshot unless the provider returns those fields.

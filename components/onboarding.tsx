@@ -9,6 +9,7 @@ import { GoogleButton } from "@/components/auth";
 
 const steps = ["role", "signup", "profile", "details", "pricing", "professional", "preview"] as const;
 type Step = (typeof steps)[number];
+type AccountRole = "creator" | "brand";
 type ImportedProfile = {
   provider: "linkedin";
   id: string;
@@ -22,7 +23,7 @@ type ImportedProfile = {
 
 export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step }) {
   const [step, setStep] = useState<Step>(initialStep);
-  const [selectedRole, setSelectedRole] = useState<"creator" | "brand" | null>(null);
+  const [selectedRole, setSelectedRole] = useState<AccountRole | null>(null);
   const [profileUrl, setProfileUrl] = useState("");
   const [country, setCountry] = useState("India");
   const [selectedIndustries, setSelectedIndustries] = useState(["AI", "Software", "Productivity"]);
@@ -36,6 +37,8 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
     const params = new URLSearchParams(window.location.search);
     const requestedStep = params.get("step") as Step | null;
     if (requestedStep && steps.includes(requestedStep)) setStep(requestedStep);
+    const requestedRole = params.get("role");
+    if (requestedRole === "creator" || requestedRole === "brand") setSelectedRole(requestedRole);
     const linkedinError = params.get("linkedin_error");
     if (linkedinError) setProfileError(linkedinError);
     if (params.get("linkedin") === "imported") {
@@ -58,6 +61,7 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
     setStep(nextStep);
     const params = new URLSearchParams(window.location.search);
     params.set("step", nextStep);
+    if (selectedRole) params.set("role", selectedRole);
     window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
   };
   const next = () => goTo(steps[Math.min(steps.length - 1, stepIndex + 1)]);
@@ -83,8 +87,8 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
       <div className="w-full max-w-[452px]">
         <div className="mb-8 flex items-center justify-between"><span className="brand-mark text-[20px]"><BrandSymbol /></span><span className="flex items-center gap-2 text-sm text-[var(--ink)]"><Globe2 size={15} className="text-[var(--muted)]" /> EN</span></div>
         {step !== "role" && step !== "preview" && <button onClick={previous} className="mb-4 inline-flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--ink)]"><ArrowLeft size={15} /> {step === "profile" ? "Back to my account" : "Back"}</button>}
-        {step === "role" && <RoleStep selected={selectedRole} onSelect={setSelectedRole} onContinue={() => selectedRole === "brand" ? window.location.assign("/brand#overview") : next()} onDemo={() => window.location.assign("/demo")} onSignIn={() => window.location.assign("/signin")} />}
-        {step === "signup" && <SignupStep onContinue={next} onSignIn={() => window.location.assign("/signin")} />}
+        {step === "role" && <RoleStep selected={selectedRole} onSelect={setSelectedRole} onContinue={next} onDemo={() => window.location.assign("/demo")} onSignIn={() => window.location.assign("/signin")} />}
+        {step === "signup" && <SignupStep role={selectedRole || "creator"} onContinue={() => selectedRole === "brand" ? window.location.assign("/brand#overview") : next()} onSignIn={() => window.location.assign("/signin")} />}
         {step === "profile" && <ProfileStep value={profileUrl} onChange={updateProfileUrl} onUseDemo={() => updateProfileUrl("https://www.linkedin.com/in/demo-creator")} onOpenDemo={() => window.location.assign("/demo")} imported={importedProfile} error={profileError} onImport={importProfile} onContinue={next} />}
         {step === "details" && <DetailsStep profile={importedProfile} country={country} setCountry={setCountry} selected={selectedIndustries} toggle={toggleIndustry} onContinue={next} />}
         {step === "pricing" && <PricingStep price={price} setPrice={setPrice} onContinue={next} />}
@@ -96,7 +100,7 @@ export function OnboardingFlow({ initialStep = "role" }: { initialStep?: Step })
   );
 }
 
-function RoleStep({ selected, onSelect, onContinue, onDemo, onSignIn }: { selected: string | null; onSelect: (role: "creator" | "brand") => void; onContinue: () => void; onDemo: () => void; onSignIn: () => void }) {
+function RoleStep({ selected, onSelect, onContinue, onDemo, onSignIn }: { selected: string | null; onSelect: (role: AccountRole) => void; onContinue: () => void; onDemo: () => void; onSignIn: () => void }) {
   return <section><h1 className="text-[26px] font-bold tracking-[-.04em]">Create your account</h1><p className="mt-1 text-sm text-[var(--muted)]">First, who are you here as?</p><div className="mt-6 space-y-3"><RoleOption title="I'm a creator" text="Get paid to create LinkedIn content for B2B brands you actually use." selected={selected === "creator"} onClick={() => onSelect("creator")} /><RoleOption title="I'm a brand" text="Find creators, launch campaigns, and trace real pipeline back to each post." selected={selected === "brand"} onClick={() => onSelect("brand")} /></div><p className="mt-6 text-center text-xs text-[var(--muted)]">Already have an account? <button onClick={onSignIn} className="text-[var(--blue)]">Sign in</button></p><PrimaryButton disabled={!selected} onClick={onContinue} className="mt-8 w-full">Continue</PrimaryButton><button onClick={onDemo} className="mt-4 w-full text-center text-sm font-semibold text-[var(--blue)]">Explore the demo workspace</button></section>;
 }
 
@@ -104,8 +108,9 @@ function RoleOption({ title, text, selected, onClick }: { title: string; text: s
   return <button onClick={onClick} className={`w-full rounded-2xl border p-5 text-left transition ${selected ? "border-[var(--blue)] bg-[var(--blue-soft)]" : "border-[var(--line-strong)] bg-white hover:border-[#9eb4f9]"}`}><p className="font-semibold">{title}</p><p className="mt-1 text-sm leading-5 text-[var(--muted)]">{text}</p></button>;
 }
 
-function SignupStep({ onContinue, onSignIn }: { onContinue: () => void; onSignIn: () => void }) {
-  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 1 OF 4</p><h1 className="mt-3 text-[26px] font-bold tracking-[-.04em]">Join Naano</h1><p className="mt-3 text-sm text-[var(--muted)]">Get paid to create LinkedIn content for B2B brands you actually use.</p><div className="mt-7 space-y-3"><SecondaryButton onClick={onContinue} className="w-full gap-3"><span className="font-bold text-[#1769ad]">in</span> Sign up with LinkedIn</SecondaryButton><GoogleButton mode="signup" /><SecondaryButton onClick={onContinue} className="w-full gap-3"><Mail size={18} className="text-[var(--muted)]" /> Sign up with email</SecondaryButton></div><p className="mt-5 text-center text-xs text-[var(--muted)]">Already have an account? <button onClick={onSignIn} className="text-[var(--blue)]">Sign in here</button></p></section>;
+function SignupStep({ role, onContinue, onSignIn }: { role: AccountRole; onContinue: () => void; onSignIn: () => void }) {
+  const isBrand = role === "brand";
+  return <section><p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">STEP 1 OF 4</p><h1 className="mt-3 text-[26px] font-bold tracking-[-.04em]">Join Naano</h1><p className="mt-3 text-sm text-[var(--muted)]">{isBrand ? "Find creators, launch campaigns, and trace real pipeline back to each post." : "Get paid to create LinkedIn content for B2B brands you actually use."}</p><div className="mt-7 space-y-3">{!isBrand && <SecondaryButton onClick={onContinue} className="w-full gap-3"><span className="font-bold text-[#1769ad]">in</span> Sign up with LinkedIn</SecondaryButton>}<GoogleButton mode="signup" role={role} /><SecondaryButton onClick={onContinue} className="w-full gap-3"><Mail size={18} className="text-[var(--muted)]" /> Sign up with email</SecondaryButton></div><p className="mt-5 text-center text-xs text-[var(--muted)]">Already have an account? <button onClick={onSignIn} className="text-[var(--blue)]">Sign in here</button></p></section>;
 }
 
 function ProfileStep({ value, onChange, onUseDemo, onOpenDemo, imported, error, onImport, onContinue }: { value: string; onChange: (value: string) => void; onUseDemo: () => void; onOpenDemo: () => void; imported: ImportedProfile | null; error: string; onImport: () => void; onContinue: () => void }) {

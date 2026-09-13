@@ -5,8 +5,10 @@ import { AlertCircle } from "lucide-react";
 import { BrandSymbol } from "@/components/creator-card";
 import { SecondaryButton } from "@/components/ui";
 
-export function GoogleButton({ mode = "signin" }: { mode?: "signin" | "signup" }) {
-  return <SecondaryButton onClick={() => window.location.assign(`/api/auth/google?mode=${mode}`)} className="w-full gap-3"><span className="font-bold text-[#ea4335]">G</span> {mode === "signup" ? "Sign up with Google" : "Continue with Google"}</SecondaryButton>;
+export function GoogleButton({ mode = "signin", role }: { mode?: "signin" | "signup"; role?: "creator" | "brand" }) {
+  const params = new URLSearchParams({ mode });
+  if (role) params.set("role", role);
+  return <SecondaryButton onClick={() => window.location.assign(`/api/auth/google?${params.toString()}`)} className="w-full gap-3"><span className="font-bold text-[#ea4335]">G</span> {mode === "signup" ? "Sign up with Google" : "Continue with Google"}</SecondaryButton>;
 }
 
 export function SignInPanel() {

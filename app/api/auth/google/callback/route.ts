@@ -47,13 +47,15 @@ export async function GET(request: NextRequest) {
     if (!user.sub || !user.email) return failure(request, "The Google account did not provide a usable email address.");
 
     const now = Date.now();
-    const session = signSession({ sub: user.sub, email: user.email, name: user.name || user.email.split("@")[0], picture: user.picture, provider: "google", iat: now, exp: now + 7 * 24 * 60 * 60 * 1000 });
+    const role = request.cookies.get("naano-oauth-role")?.value === "brand" ? "brand" : "creator";
+    const session = signSession({ sub: user.sub, email: user.email, name: user.name || user.email.split("@")[0], picture: user.picture, role, provider: "google", iat: now, exp: now + 7 * 24 * 60 * 60 * 1000 });
     const mode = request.cookies.get("naano-oauth-mode")?.value;
-    const destination = mode === "signup" ? "/onboarding?step=profile&auth=google" : "/creator?auth=google#home";
+    const destination = role === "brand" ? "/brand?auth=google&role=brand#overview" : mode === "signup" ? "/onboarding?step=profile&auth=google&role=creator" : "/creator?auth=google#home";
     const response = NextResponse.redirect(new URL(destination, request.url));
     response.cookies.set("naano-session", session, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 7 * 24 * 60 * 60, path: "/" });
     response.cookies.delete("naano-oauth-state");
     response.cookies.delete("naano-oauth-mode");
+    response.cookies.delete("naano-oauth-role");
     return response;
   } catch {
     return failure(request, "Google sign-in could not be completed. Please try again.");

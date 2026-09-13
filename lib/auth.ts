@@ -5,6 +5,7 @@ export type GoogleSession = {
   email: string;
   name: string;
   picture?: string;
+  role: "creator" | "brand";
   provider: "google";
   iat: number;
   exp: number;

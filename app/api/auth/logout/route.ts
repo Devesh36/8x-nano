@@ -9,6 +9,7 @@ const sessionCookies = [
   "naano-linkedin-source",
   "naano-oauth-state",
   "naano-oauth-mode",
+  "naano-oauth-role",
 ];
 
 export async function POST() {

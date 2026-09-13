@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
 
   const state = crypto.randomBytes(32).toString("hex");
   const mode = request.nextUrl.searchParams.get("mode") === "signup" ? "signup" : "signin";
+  const role = request.nextUrl.searchParams.get("role") === "brand" ? "brand" : "creator";
   const googleUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   googleUrl.searchParams.set("client_id", clientId);
   googleUrl.searchParams.set("redirect_uri", googleRedirectUri(request.nextUrl.origin));
@@ -26,5 +27,6 @@ export async function GET(request: NextRequest) {
   const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, maxAge: 600, path: "/" };
   response.cookies.set("naano-oauth-state", state, cookieOptions);
   response.cookies.set("naano-oauth-mode", mode, cookieOptions);
+  response.cookies.set("naano-oauth-role", role, cookieOptions);
   return response;
 }

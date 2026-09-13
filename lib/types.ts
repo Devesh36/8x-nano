@@ -5,6 +5,18 @@ export type CreatorProfile = {
   country: string;
   industries: string[];
   avatarTone: string;
+  avatarUrl?: string;
+};
+
+export type LinkedInImportedProfile = {
+  provider: "linkedin";
+  id: string;
+  name: string;
+  email?: string;
+  picture?: string;
+  sourceUrl: string;
+  importedAt: number;
+  exp: number;
 };
 
 export type CreatorCardData = CreatorProfile & {

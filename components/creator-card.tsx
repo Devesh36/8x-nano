@@ -15,7 +15,7 @@ export function CreatorCard({ data = creatorCard, compact = false }: { data?: Cr
         </div>
       </div>
       <div className="relative px-5 pb-5 pt-12">
-        <div className={`absolute left-1/2 top-[-32px] h-16 w-16 -translate-x-1/2 rounded-full border-2 border-[var(--blue)] bg-gradient-to-br ${data.avatarTone} p-1`}><div className="h-full w-full rounded-full bg-[radial-gradient(circle_at_62%_27%,#d5a47b_0_10%,transparent_11%),linear-gradient(135deg,#263f78,#1d2138_60%,#92645d)]" /></div>
+        <div className={`absolute left-1/2 top-[-32px] h-16 w-16 -translate-x-1/2 rounded-full border-2 border-[var(--blue)] bg-gradient-to-br ${data.avatarTone} p-1`}><div style={data.avatarUrl ? { backgroundImage: `url(${data.avatarUrl})` } : undefined} className="h-full w-full rounded-full bg-[radial-gradient(circle_at_62%_27%,#d5a47b_0_10%,transparent_11%),linear-gradient(135deg,#263f78,#1d2138_60%,#92645d)] bg-cover bg-center" /></div>
         <h3 className="text-[22px] font-bold tracking-[-.04em]">{data.name}</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">{data.industries.join(" · ")}</p>
         <p className="mx-auto mt-4 max-w-[300px] text-[13px] leading-5 text-[var(--muted)]">{data.headline}</p>

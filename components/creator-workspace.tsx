@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Bell, CalendarDays, ChartNoAxesCombined, ChevronDown, ChevronRight, CircleHelp, Copy, Eye, Grid2X2, Layers3, Menu, MessageCircle, Percent, Search, Share2, ShoppingBag, SlidersHorizontal, Users, WalletCards, X } from "lucide-react";
-import { creatorCard, navItems, opportunities } from "@/lib/data";
+import { creatorCard, demoUser, navItems, opportunities } from "@/lib/data";
 import type { NavSection } from "@/lib/types";
 import { BrandSymbol, CreatorCard } from "@/components/creator-card";
 import { PrimaryButton, SecondaryButton, StatusPill, Surface } from "@/components/ui";
@@ -22,7 +22,12 @@ export function CreatorWorkspace() {
     window.addEventListener("hashchange", sync);
     const params = new URLSearchParams(window.location.search);
     setTour(params.get("tour") === "1");
-    setDemo(params.get("demo") === "1");
+    const isDemo = params.get("demo") === "1";
+    setDemo(isDemo);
+    if (isDemo) {
+      setAccount({ name: demoUser.profile.name, email: demoUser.email });
+      window.localStorage.setItem("naano-demo-session", JSON.stringify(demoUser));
+    }
     fetch("/api/auth/session").then((response) => response.json()).then((data: { user?: { name: string; email: string; picture?: string } | null }) => setAccount(data.user || null)).catch(() => undefined);
     return () => window.removeEventListener("hashchange", sync);
   }, []);
